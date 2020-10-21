@@ -3,7 +3,7 @@
 from setuptools import setup
 from setuptools import find_packages
 
-setup(name='pubscope',
+setup(name='puboracle',
       version='0.0',
       description='text mining of scientific publications',
       author='Alexandros Goulas',
