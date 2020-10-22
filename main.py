@@ -68,7 +68,8 @@ for affil in all_affiliations:
     cleaned = re.sub("[\(\[].*?[\)\]]", "", affil)#remove text in parentheses
     cleaned = re.sub("\S*@\S*\s?", "", cleaned).rstrip()#remove email address
     cleaned = cleaned.replace('electronic address:','')# remove 'electronic address:'
-    cleaned = cleaned.replace('Electronic address:','')# remove 'electronic address:'
+    cleaned = cleaned.replace('Electronic address:','')# remove 'Electronic address:'
+    cleaned = re.sub("^\sand", "", cleaned)# remove 'and' from the beggining (preceeded by whitespace)
     all_affiliations_cleaned.append(cleaned)
  
 (all_affiliations_cleaned, 

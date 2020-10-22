@@ -169,6 +169,10 @@ def fetch_write_data(query = None,
     
     Input
     -----
+    max_batch: int, specifying how many batches (of length retmax) will be 
+        taken into account. Default None means that all the data corresponding
+        to the submitted query will be fetched and stored
+        
     save_folder: str containing the path to the folder where the .xml files
         will be stored
     
