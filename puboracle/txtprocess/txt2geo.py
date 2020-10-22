@@ -5,7 +5,7 @@ import numpy as np
 from geopy.geocoders import Nominatim
 import pycountry
 
-from txtprocess import txtfun
+from . import txtfun
 
 def get_lat_lon_from_text(all_txt_location, abstract_to_specific=False):
     '''

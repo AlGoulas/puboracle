@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import re 
 
-from metrics import txtmetrics
+from ..metrics import txtmetrics
 
 def remove_digits_from_str(s):
     '''
