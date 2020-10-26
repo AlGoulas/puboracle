@@ -218,21 +218,3 @@ def fetch_write_data(query = None,
             
         batch += 1
     
-if __name__ == '__main__': 
-    query = 'neuroscience OR brain'
-    mindate = '2019' 
-    maxdate = '2020'
-    email = 'a.goulas@uke.de' 
-    save_folder = '/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/text_oracle/xmls/2019-2020/'
-    
-    fetch_write_data(query = query,
-                     datetype = 'pdat',
-                     mindate = mindate,
-                     maxdate = maxdate,
-                     email = email,
-                     days = None,
-                     max_batch = None,
-                     retmax = 1000,
-                     save_folder = save_folder 
-                     )
-    

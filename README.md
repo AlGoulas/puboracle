@@ -1,5 +1,6 @@
 # puboracle
 Extracting insights from scientific publications in the life sciences
+![puboracle](puboracle.png)
 
 # Description
 *puboracle* is a package that combines text mining, natural language processing, and geolocation to offer key information that pertain to the domain of scientific publications in the life sciences. 
