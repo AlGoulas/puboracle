@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from collections import Counter
 import itertools
 import numpy as np
 
@@ -134,7 +135,8 @@ def build_net_coauthors_np(list_unique_authors, list_coauthorships=None):
 
 def construct_edge_wei_list(list_unique_authors, 
                             list_coauthorships = None,
-                            exclude = []
+                            exclude = [],
+                            verbose = True
                             ):
     '''
     Input
@@ -143,11 +145,13 @@ def construct_edge_wei_list(list_unique_authors,
         the nodes of the network to be constructed
      
     list_coauthorships: list of str with the author names of a publication. 
-        Each str potentially contains many ;-seperated author names 
+        Each str potentially contains many colon-seperated author names 
         
     exclude: list of str, default [], containing str that will function as filter
       e.g., ['', ' '] 
-      
+    
+    verbose: bool, default True, output messages during processing 
+        
     Output
     ------
     all_edges: list of tuples (i,j) denoting an edge between nodes i and j
@@ -161,9 +165,10 @@ def construct_edge_wei_list(list_unique_authors,
     # Each str contains all the co-authors seperated by ';'
     nr_coauthorships = len(list_coauthorships)
     for counter,current_coauthorships in enumerate(list_coauthorships):
-        print('Iterating...:',counter, '/', nr_coauthorships)
+        print('Iterating...:',counter+1, '/', nr_coauthorships)
         co_authors = current_coauthorships.split(';')
-        
+        #Remove potential empty str and whitespaces
+        co_authors = [ca for ca in co_authors if not ca.isspace() and ca]
         # Remove strs if exclude is not None
         if exclude is not None:
             co_authors = [ca for ca in co_authors if ca not in exclude]
@@ -173,10 +178,34 @@ def construct_edge_wei_list(list_unique_authors,
         author_idx = [list_unique_authors.index(ca) for ca in co_authors]
         
         # Make pairs of indices between co-authors
-        # This contains double pairs, e.g., 1,2 2,1 which is reduntant for 
-        # undirected graphs
+        # This contains double pairs, e.g., 1,2 2,1 
         all_pairs = make_pairs_idx(author_idx)
         if len(all_pairs) > 1:
             all_edges.extend(all_pairs)
             
     return all_edges
+
+def create_network_from_edge_wei_list(all_edges,
+                                      nr_vertices = None,
+                                      directed = False
+                                      ):
+    net = Graph(directed=directed)
+    net.add_vertices(nr_vertices)
+    
+    # Create a counter object that summarizes unique edges and their occurence
+    # The edge occurence is treated a the edge weight
+    counted_edges = Counter(all_edges)
+    edges = [pair for pair in counted_edges.keys()]#list of tuples (unique edges)
+    weights = [wei for wei in counted_edges.values()]#list of weights
+    
+    # Add edges and respective weights to the graph
+    net.add_edges(edges)
+    net.es['weight'] = weights
+
+    # if return_undirected is True:
+    #     net.to_undirected(combine_edges='sum')
+        
+    return net, edges, weights    
+    
+    
+    
