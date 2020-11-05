@@ -1,182 +1,127 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from collections import Counter
 import itertools
-import numpy as np
+from tqdm import tqdm
 
 from igraph import Graph
 
-def build_net_coauthors(list_unique_authors, list_coauthorships=None):
+def _construct_edges_list(list_unique_items, 
+                          list_coitems=None,
+                          exclude=[]):
     '''
-    BETA
-    '''
-    # Initialize the graph and as many verttices as len(list_unique_authors)
-    g = Graph(len(list_unique_authors), directed=False)    
-    first = True
-    # Iterate list_coauthorships - it is a list of str
-    # Each str contains all the co-authors seperated by ';'
-    nr_coauthorships = len(list_coauthorships)
-    for counter,current_coauthorships in enumerate(list_coauthorships):
-        print('Iterating...:',counter, '/', nr_coauthorships)
-        co_authors = current_coauthorships.split(';')
-        
-        # Get the indexes of each coauthor in the co_authors list
-        # These indexes will be vertices indexes for network g
-        author_idx = [list_unique_authors.index(ca) for ca in co_authors]
-        
-        # Make pairs of indices between co-authors
-        # This contains double pairs, e.g., 1,2 2,1 which is reduntant for 
-        # undirected graphs
-        all_pairs = make_pairs_idx(author_idx)
-        if all_pairs:
-            all_weights = [1]*len(all_pairs)
-            
-            if first is True:
-                g.add_edges(all_pairs)
-                g.es['weight'] = all_weights
-                first = False
-            else:
-                g = add_edges_to_graph(g, 
-                                       edge_list = all_pairs, 
-                                       weight_list = all_weights
-                                       )
-                    
-    return g
-
-def make_pairs_idx(list_idx, without_swaps=True):
-    '''
-    Create a list of tuples containing all the pairs i,j of integers contained 
-    in list_idx without swaping pairs: (i,j) excludes (j,i) from the list
-    
-    Input
-    -----
-    list_idx: list of int out of which pairs will be contructed
-    
-    without_swaps: bool, default True, sepcifying if all_pairs should be 
-        constructed with (i,j) but not (j,i) (=True) or with both
-        (i,j) and (j,i) (=False)
-        
-    Output
-    ------
-    all_pairs: list of tuples of int pairs    
-    '''
-    if without_swaps is False:
-        # Make the condition for adding the pair a lambda fun
-        f = lambda i, j, all_pairs: (i,j) not in all_pairs and (j,i) not in all_pairs and i != j
-        #Create the pairs from list_idx
-        all_pairs = []
-        for i in list_idx:
-            pairs = [(i,j) for j in list_idx if f(i, j, all_pairs)]
-            all_pairs.extend(pairs) 
-    else:
-        all_pairs = list(itertools.permutations(list_idx, 2))
-        
-    return all_pairs             
-                
-def add_edges_to_graph(g, 
-                       edge_list = None, 
-                       weight_list = None):
-    '''
-    BETA
-    '''
-    g_edges = g.get_edgelist()
-    g_weight = g.es['weight']
-    
-    all_idx_remove = []
-    for position,e in enumerate(edge_list):
-        if g.are_connected(e[0], e[1]) is True:
-            # We are working on an undirected graph, thus (i,j)=(j,i)
-            try:
-                idx_remove = g_edges.index(e)
-            except:
-                idx_remove = g_edges.index((e[1],e[0]))
-             
-            # If edge exists then add the existing weight to the new weight    
-            g_weight[idx_remove] = g_weight[idx_remove] + weight_list[position]  
-            all_idx_remove.append(idx_remove)# Save the idx for removing
-    
-    # Remove all_idx_remove from edge_list and weight_list
-    edge_list = [item for i,item in enumerate(edge_list) if i not in all_idx_remove]  
-    weight_list = [item for i,item in enumerate(weight_list) if i not in all_idx_remove] 
-    
-    # Update g with weights and edges
-    g = Graph(g.vcount(), directed=False)#create new graph (something is off when "updating" the existing one)
-    g.add_edges(g_edges + edge_list)
-    g.es['weight'] = g_weight + weight_list
-    
-    return g
-
-def build_net_coauthors_np(list_unique_authors, list_coauthorships=None):
-    '''
-    BETA
-    '''
-    # Initialize the graph and as many verttices as len(list_unique_authors)
-    g = np.zeros((len(list_unique_authors), len(list_unique_authors)))   
-    
-    # Iterate list_coauthorships - it is a list of str
-    # Each str contains all the co-authors seperated by ';'
-    nr_coauthorships = len(list_coauthorships)
-    for counter,current_coauthorships in enumerate(list_coauthorships):
-        print('Iterating...:',counter, '/', nr_coauthorships)
-        co_authors = current_coauthorships.split(';')
-        
-        if len(co_authors) > 1:
-            # Get the indexes of each coauthor in the co_authors list
-            # These indexes will be vertices indexes for network g
-            author_idx = [list_unique_authors.index(ca) for ca in co_authors]
-            
-            # Make pairs of indices between co-authors
-            all_pairs = np.asarray(make_pairs_idx(author_idx))
-            
-            # Update graph
-            g[all_pairs[:,0], all_pairs[:,1]] = g[all_pairs[:,0], all_pairs[:,1]] + 1   
-           
-    return g
-
-def construct_edge_wei_list(list_unique_authors, 
-                            list_coauthorships = None,
-                            exclude = []
-                            ):
-    '''
-    Input
-    -----
-    list_unique_authors: list of str, with the unique str that will serve as
-        the nodes of the network to be constructed
+    Args:
+        list_unique_items: list of unique items to serve as nodes of the network 
+            to be constructed
      
-    list_coauthorships: list of str with the author names of a publication. 
-        Each str potentially contains many ;-seperated author names 
+        list_items: list of lists, with list_items[i] containing a list of "co-occuring"
+            items. A conenction will be placed in the network between them.
         
-    exclude: list of str, default [], containing str that will function as filter
-      e.g., ['', ' '] 
-      
-    Output
-    ------
-    all_edges: list of tuples (i,j) denoting an edge between nodes i and j
-        Note: there can be multiple such edges, e.g., (3,5) (3,5) (5,3),
-        the sum of each unique pair denotes the strength of the association
-        between i,j
+        exclude: list of str, default [], containing str that will function 
+            as filter e.g., ['', ' '] 
     
+    Returns:
+        all_edges: list of tuples (i,j) denoting an edge between nodes i and j
+            Note: there can be multiple such edges, e.g., (3,5) (3,5) (5,3),
+            the sum of each unique pair denotes the strength of the association
+            between i,j
     '''           
     all_edges = []
-    # Iterate list_coauthorships - it is a list of str
-    # Each str contains all the co-authors seperated by ';'
-    nr_coauthorships = len(list_coauthorships)
-    for counter,current_coauthorships in enumerate(list_coauthorships):
-        print('Iterating...:',counter, '/', nr_coauthorships)
-        co_authors = current_coauthorships.split(';')
-        
-        # Remove strs if exclude is not None
-        if exclude is not None:
-            co_authors = [ca for ca in co_authors if ca not in exclude]
-        
+    # Iterate list_coauthorships - it is a list of of list of str
+    #print(' Calculating network edges...')
+    pbar = tqdm(total=len(list_coitems))
+    pbar.set_description('Calculating network edges...') 
+    for counter, current_coitems in enumerate(list_coitems):
+        #Remove potential empty str and whitespaces
+        current_coitems = [cci for cci in current_coitems if not cci.isspace() and cci]# "and cci" is checking if the string is not empty 
+        # Remove strs if exclude is not empty
+        # Changed is not None to the bool value of a list
+        if exclude:
+            current_coitems = [cci for cci in current_coitems if cci not in exclude]   
         # Get the indexes of each coauthor in the co_authors list
         # These indexes will be vertices indexes for network
-        author_idx = [list_unique_authors.index(ca) for ca in co_authors]
-        
+        items_idx = [list_unique_items.index(cci) for cci in current_coitems]
         # Make pairs of indices between co-authors
-        # This contains double pairs, e.g., 1,2 2,1 which is reduntant for 
-        # undirected graphs
-        all_pairs = make_pairs_idx(author_idx)
+        all_pairs = list(itertools.combinations(items_idx, 2))
         if len(all_pairs) > 1:
-            all_edges.extend(all_pairs)
-            
+            all_edges.extend(all_pairs) 
+        pbar.update(1)    
+    pbar.close()
+        
     return all_edges
+
+def _create_network_from_edge_wei_list(all_edges,
+                                       nr_vertices,
+                                       directed=False,
+                                       multiple=True,
+                                       loops=False, 
+                                       combine_edges='mean'):
+    net = Graph(directed=directed)
+    net.add_vertices(nr_vertices)
+    
+    # Create a counter object that summarizes unique edges and their occurence
+    # The edge occurence is treated a the edge weight
+    counted_edges = Counter(all_edges)
+    edges = [pair for pair in counted_edges.keys()] # list of tuples (unique edges)
+    weights = [wei for wei in counted_edges.values()] # list of weights
+    
+    # Add edges and respective weights to the graph
+    net.add_edges(edges)
+    net.es['weight'] = weights
+
+    # Construct the graph with or without loops (self-self connections) and 
+    # multiple edges and combine edges based on the combine_edges str param 
+    net.simplify(multiple=multiple, 
+                 loops=loops, 
+                 combine_edges=combine_edges
+                 )
+        
+    return net, edges, weights
+
+def compute_graph(pub_list, item='authors'):
+    """
+    Args:
+        pub_list: list of Publication objects
+        
+        item: {'authors', 'affiliation'}, default 'authors', 
+            where to create graph on
+    Returns:
+        net: an igraph object describing the relation between the items in the
+            form of a graph. 
+            Note that labels of each node are contained in:
+            net.vs['label']
+        
+        co_items: the list of co-appearing items
+    """
+    co_items = []    
+    pbar = tqdm(total=len(pub_list))
+    pbar.set_description('Extracting '+ item)
+    for pub in pub_list:
+        # Make a co_author_list from the current pub object
+        if item == 'authors':
+            current_co_items = [author.forename + ' ' + author.lastname for author in pub.authors]
+        if item == 'affiliations':    
+            current_co_items = [affil.name for affil in pub.get_unique_affiliations()]
+        co_items.append(current_co_items)
+        pbar.update(1)    
+    pbar.close()
+    
+    # Create edge list
+    unique_items = list(set([x for sublist in co_items for x in sublist]))
+    all_edges = _construct_edges_list(unique_items, 
+                                      list_coitems=co_items,
+                                      exclude=[]
+                                      )
+    
+    # create igraph network
+    (net, 
+     _, 
+     _) = _create_network_from_edge_wei_list(all_edges,
+                                             nr_vertices = len(unique_items)
+                                             )
+    
+    # Add the unique_items as labels to the igraph object
+    net.vs['label'] = unique_items 
+    
+    return net, co_items           
+                
