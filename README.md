@@ -26,7 +26,7 @@ pip install .
 # Example
 The package comes with a Jupyter Notebook that shocases how *puboracle* can be used. The example in the notebook offers insights into articles that were published in the last 365 days. Specifcially, the following key information is extracted and visualized:
 
-i. Geospatial information concerning the location (longitude and latitude) of the institutes or universitites where the published resaerch took place. 
+i. Geospatial information concerning the location (longitude and latitude) of the institutes or universitites where the published research took place. 
 
 ii. The top 10 locations in the world where the most publications in the last years were produced.
 
