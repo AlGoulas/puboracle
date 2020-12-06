@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+import plotly as py
+from plotly.graph_objs import Figure, Scatter, Layout, layout
 import seaborn as sns
 from shapely.geometry import Point
 import geopandas as gpd
@@ -173,3 +175,108 @@ def visualize_counter_selection(selection_list,
                     dpi = 300,
                     bbox_inches = 'tight'
                     )
+        
+def plot_graph(layt,
+               net = None,
+               filename_save = None,
+               title = None
+               ):
+    '''
+    Plot a network layout produced with igraph with plotly 
+    
+    Input
+    -----
+    layt: igraph.layout.Layout object
+    
+    net: igraph.Graph object. The network whose layout will be plotted
+    
+    filename_save: str specifying a path and a filename for saving 
+        the .html that will be produced from the function
+        
+    title: str for the title of the plot    
+    
+    NOTE: This function wraps this plotly code:
+    https://plotly.com/python/v3/igraph-networkx-comparison/#igraph
+    to facilitate plotting of igraph network layouts without writting 
+    extensive lines of code. It uses, however, the offline plotting option
+    
+    For exploiting all plotly capacities, please refer to the corresponding
+    tutorials. Current function only offers a basic use of plotly for 
+    interactive exploration of network layouts produced by igraph
+    '''
+    # Get labels, nr of nodes and edge list
+    labels = list(net.vs['label'])
+    N = len(labels)#nr of nodes
+    E = [e.tuple for e in net.es]#list of edges (tuples of node ids)
+    
+    Xn=[layt[k][0] for k in range(N)]
+    Yn=[layt[k][1] for k in range(N)]
+    Xe=[]
+    Ye=[]
+    for e in E:
+        Xe+=[layt[e[0]][0],layt[e[1]][0], None]
+        Ye+=[layt[e[0]][1],layt[e[1]][1], None]
+    
+    trace1=Scatter(x=Xe,
+                   y=Ye,
+                   mode='lines',
+                   line= dict(color='rgb(210,210,210)', width=1),
+                   hoverinfo='none'
+                   )
+    
+    trace2=Scatter(x=Xn,
+                   y=Yn,
+                   mode='markers',
+                   name='ntw',
+                   marker=dict(symbol='circle-dot',
+                               size=5,
+                               color='#6959CD',
+                               line=dict(color='rgb(50,50,50)', 
+                                          width=0.5)
+                               ),
+                   text=labels,
+                   hoverinfo='text'
+                   )
+    
+    axis=dict(showline=False, # hide axis line, grid, ticklabels and  title
+              zeroline=False,
+              showgrid=False,
+              showticklabels=False,
+              title=''
+              )
+    
+    width=800
+    height=800
+    layout_to_plot=Layout(title=title,
+                          font= dict(size=12),
+                          showlegend=False,
+                          autosize=False,
+                          width=width,
+                          height=height,
+                          xaxis=layout.XAxis(axis),
+                          yaxis=layout.YAxis(axis),
+                          margin=layout.Margin(
+                            l=40,
+                            r=40,
+                            b=85,
+                            t=100,
+                        ),
+        hovermode='closest',
+        annotations=[
+               dict(
+                    showarrow=False,
+                    text=title,
+                    xref='paper',
+                    yref='paper',
+                    x=0,
+                    y=-0.1,
+                    xanchor='left',
+                    yanchor='bottom',
+                    font=dict(size=14)
+                   )
+            ]
+        )
+    
+    data=[trace1, trace2]
+    fig=Figure(data=data, layout=layout_to_plot)
+    py.offline.plot(fig, filename=filename_save)

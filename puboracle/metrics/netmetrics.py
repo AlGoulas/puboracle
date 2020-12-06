@@ -6,25 +6,28 @@ from tqdm import tqdm
 
 from igraph import Graph
 
-def _construct_edges_list(list_unique_items, 
-                          list_coitems=None,
-                          exclude=[]):
+def construct_edges_list(list_unique_items, 
+                         list_coitems = None,
+                         exclude = []):
     '''
-    Args:
-        list_unique_items: list of unique items to serve as nodes of the network 
+    Input
+    -----
+    list_unique_items: list of unique items to serve as nodes of the network 
             to be constructed
      
-        list_items: list of lists, with list_items[i] containing a list of "co-occuring"
-            items. A conenction will be placed in the network between them.
+    list_items: list of lists, with list_items[i] containing a list of "co-occuring"
+            items. A connection will be placed in the network between them.
         
-        exclude: list of str, default [], containing str that will function 
+    exclude: list of str, default [], containing str that will function 
             as filter e.g., ['', ' '] 
     
-    Returns:
-        all_edges: list of tuples (i,j) denoting an edge between nodes i and j
-            Note: there can be multiple such edges, e.g., (3,5) (3,5) (5,3),
-            the sum of each unique pair denotes the strength of the association
-            between i,j
+    Output
+    ------
+    all_edges: list of tuples (i,j) denoting an edge between nodes i and j
+    
+    Note: there can be multiple such edges, e.g., (3,5) (3,5) (5,3),
+    the sum of each unique pair denotes the strength of the association
+    between i,j
     '''           
     all_edges = []
     # Iterate list_coauthorships - it is a list of of list of str
@@ -50,12 +53,12 @@ def _construct_edges_list(list_unique_items,
         
     return all_edges
 
-def _create_network_from_edge_wei_list(all_edges,
-                                       nr_vertices,
-                                       directed=False,
-                                       multiple=True,
-                                       loops=False, 
-                                       combine_edges='mean'):
+def create_network_from_edge_wei_list(all_edges,
+                                      nr_vertices,
+                                      directed = False,
+                                      multiple = True,
+                                      loops = False, 
+                                      combine_edges = 'mean'):
     net = Graph(directed=directed)
     net.add_vertices(nr_vertices)
     
@@ -108,15 +111,15 @@ def compute_graph(pub_list, item='authors'):
     
     # Create edge list
     unique_items = list(set([x for sublist in co_items for x in sublist]))
-    all_edges = _construct_edges_list(unique_items, 
-                                      list_coitems=co_items,
-                                      exclude=[]
-                                      )
+    all_edges = construct_edges_list(unique_items, 
+                                     list_coitems=co_items,
+                                     exclude=[]
+                                     )
     
     # create igraph network
     (net, 
      _, 
-     _) = _create_network_from_edge_wei_list(all_edges,
+     _) = create_network_from_edge_wei_list(all_edges,
                                              nr_vertices = len(unique_items)
                                              )
     

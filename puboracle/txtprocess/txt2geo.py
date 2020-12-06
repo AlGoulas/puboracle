@@ -74,6 +74,7 @@ def get_lat_lon_from_text(all_txt_location, abstract_to_specific=False):
 
 def get_lat_lon_from_text_wordwise(all_txt_location,
                                    reverse = True,
+                                   verbose = False, 
                                    user_agent = 'testing'
                                    ):
     '''
@@ -135,10 +136,12 @@ def get_lat_lon_from_text_wordwise(all_txt_location,
     nr_txt_loc = len(all_txt_location)
     # Iterate all lists in all_txt_location
     for counter,current_affil in enumerate(all_txt_location):
-        print('\nUnpacking textual location descriptions...:', counter+1, '/', nr_txt_loc)
+        if verbose is True:
+            print('\nUnpacking textual location descriptions...:', counter+1, '/', nr_txt_loc)
         current_affil_split = current_affil.rsplit(';')#str is a comma (;) seperated str with affiliations
         for loc in current_affil_split:
-            print('\nSearching for latitude and longitude for location description:', loc)
+            if verbose is True:
+                print('\nSearching for latitude and longitude for location description:', loc)
             location = None
             loc_split = loc.split(' ')#get words, assuming they are seperated by space
             if reverse is True:
@@ -150,7 +153,8 @@ def get_lat_lon_from_text_wordwise(all_txt_location,
                     full_txt_location.append(l)#keep the textual description of the location that resulted in the lat lon
                     break#if valid location is returned, exit 
             if location is None:
-                print('\nNo latitude and longitude for...:', loc_split)
+                if verbose is True:
+                    print('\nNo latitude and longitude for...:', loc_split)
                 lat.append(np.nan)
                 lon.append(np.nan)
             else:
