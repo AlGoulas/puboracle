@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import numpy as np
+import time
 
 from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut
 import pycountry
+
 
 from . import txtfun
 
@@ -75,7 +78,9 @@ def get_lat_lon_from_text(all_txt_location, abstract_to_specific=False):
 def get_lat_lon_from_text_wordwise(all_txt_location,
                                    reverse = True,
                                    verbose = False, 
-                                   user_agent = 'testing'
+                                   user_agent = 'testing',
+                                   max_attempts = 5,
+                                   rand_wait_time_sec = 2,
                                    ):
     '''
     Get latitude and longitude information by using individual words from 
@@ -129,7 +134,7 @@ def get_lat_lon_from_text_wordwise(all_txt_location,
     print(txt)
     ['Arizona', 'Germany', 'Bordeaux']
     '''
-    geolocator = Nominatim(user_agent=user_agent)
+    geolocator = Nominatim(user_agent = user_agent)
     lat=[]
     lon=[]
     full_txt_location = []
@@ -148,7 +153,18 @@ def get_lat_lon_from_text_wordwise(all_txt_location,
                 loc_split = loc_split[::-1]#reverse so that we process the city faster (with affiliation formats, city usually near the end)
             for l in loc_split:
                 l = l.replace(',','')#TODO: remove all non-character elements not only ','
-                location = geolocator.geocode(l)
+                #Go the geocoding within a loop to avoid issues with the server
+                attempt = 0
+                location = None
+                while attempt <= max_attempts:
+                    try:
+                        if rand_wait_time_sec is not None:time.sleep(np.random.randint(rand_wait_time_sec))
+                        location = geolocator.geocode(l)
+                        attempt = max_attempts + 1
+                    except:
+                        print("\nAttempt...:" + str(attempt) + "/" + str(max_attempts) + " failed")
+                        attempt += 1
+                #location = geolocator.geocode(l)
                 if location is not None:
                     full_txt_location.append(l)#keep the textual description of the location that resulted in the lat lon
                     break#if valid location is returned, exit 

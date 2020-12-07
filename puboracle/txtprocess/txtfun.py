@@ -133,3 +133,44 @@ def remove_str_newline(txt):
     txt = txt.replace('\n','')
     
     return txt
+
+def remove_email_txtinparen(lst_str,
+                            len_threshold = 15,
+                            delimeter = ';'
+                            ):
+    '''
+    Remove elements from list of strings:
+    i.  email address 
+    ii. text in parentheses
+    iii. the word "and" from the beginning of a string 
+    iv. strings with length of string below len_threshold 
+    
+    Input
+    -----
+    
+    
+    Output
+    ------
+    
+    '''
+    lst_str_cleaned = []
+    for i,affil in enumerate(lst_str):
+        all_current_cleaned = []
+        affil_splitted = affil.split(delimeter)
+        for a in affil_splitted:
+            cleaned = re.sub("[\(\[].*?[\)\]]", "", a)#remove text in parentheses
+            cleaned = re.sub("\S*@\S*\s?", "", cleaned).rstrip()#remove email address
+            cleaned = cleaned.replace('electronic address:','')# remove 'electronic address:'
+            cleaned = cleaned.replace('Electronic address:','')# remove 'Electronic address:'
+            cleaned = re.sub("^\sand", "", cleaned)# remove 'and' from the beggining (preceeded by whitespace)
+            if cleaned and len(cleaned) > len_threshold:   
+                all_current_cleaned.append(cleaned.lstrip())#remove potential leading whitespace
+        # If we have non-empty all_current_cleaned list then append it in
+        # lst_str_cleaned with the joined with the delimeter  
+        if all_current_cleaned:
+            lst_str_cleaned.append(delimeter.join(all_current_cleaned))
+        
+    return lst_str_cleaned
+        
+    
+    
