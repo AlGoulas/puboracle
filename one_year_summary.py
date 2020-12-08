@@ -68,29 +68,30 @@ affiliations = pub_data[keys_to_parse.index('affiliations')]
 #         indexes_empty.append(i)
 #     else:    
 #         affiliations_cleaned.append(cleaned.lstrip())#remove potential leading whitespace
-#%%
+
 affiliations_cleaned = txtfun.remove_email_txtinparen(affiliations,
                                                       len_threshold = 12,
                                                       delimeter = ';'
-                                                     ) 
-#%%   
+                                                      ) 
+ 
 # Get all the unique cleaned affiliations     
 (all_affiliations_cleaned, 
  unique_affiliations_cleaned, 
  occurences) = txtmetrics.get_unique_strs(affiliations_cleaned,
                                           exclude=['', ' ']
                                           )
- 
-# Remove potential leading whitespace in the unique_affiliations_cleaned str
-unique_affiliations_cleaned = [uac.lstrip() for uac in unique_affiliations_cleaned if len(uac) > len_threshold] 
-                                          
+
 # Extract lat lot
-lat,lon,txtforloc = txt2geo.get_lat_lon_from_text_wordwise(
-                                                           unique_affiliations_cleaned,
-                                                           verbose = True,
-                                                           reverse = False,
-                                                           rand_wait_time_sec = None
-                                                           )
+lat,lon,txtforloc = txt2geo.get_lat_lon_from_text(
+                                                  unique_affiliations_cleaned[-11:-20:-1],
+                                                  geophrase_delimeter = ',',
+                                                  verbose = True,
+                                                  reverse = False,
+                                                  only_alpha = False,
+                                                  user_agent = 'geocoding tryout',
+                                                  rand_wait_time_sec = 2
+                                                  )
+
 
 # Remove nan from lat lon and visualize the rest
 lat = [item for item in lat if not math.isnan(item)]
@@ -108,9 +109,27 @@ visfun.vis_lon_lat(longitude=lon, latitude=lat)
                                   )
                                                      
 visfun.visualize_counter_selection(affiliations_nrpubs_topmerged)
-                                                     
+  
+
+co_occurying = [ac.split(';') for ac in affiliations_cleaned]
+
+#%%                                                   
 # Construct the collaboration network based on affiliations.
-all_edges = netmetrics.construct_edges_list(unique_items, 
-                                 list_coitems=co_items,
-                                 exclude=[]
-                                 ) 
+all_edges = netmetrics.construct_edges_list(unique_affiliations_cleaned, 
+                                            list_coitems = co_occurying,
+                                            exclude=[]
+                                            ) 
+#%%
+net, _, _ = netmetrics.create_network_from_edge_wei_list(all_edges,
+                                                         nr_vertices = len(unique_affiliations_cleaned),
+                                                         labels = unique_affiliations_cleaned
+                                                        )
+
+#Visualize with MDS the affiliation-to-affiliation network
+layt = net.layout_mds()
+filename_save = '/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/text_oracle/figs_puboracle_example' 
+visfun.plot_graph(layt,
+                  net = net,
+                  filename_save = filename_save,
+                  title = 'Collaborations between affiliations'
+                  )

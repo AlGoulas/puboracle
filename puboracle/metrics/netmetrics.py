@@ -15,7 +15,7 @@ def construct_edges_list(list_unique_items,
     list_unique_items: list of unique items to serve as nodes of the network 
             to be constructed
      
-    list_items: list of lists, with list_items[i] containing a list of "co-occuring"
+    list_coitems: list of lists, with list_items[i] containing a list of "co-occuring"
             items. A connection will be placed in the network between them.
         
     exclude: list of str, default [], containing str that will function 
@@ -30,7 +30,7 @@ def construct_edges_list(list_unique_items,
     between i,j
     '''           
     all_edges = []
-    # Iterate list_coauthorships - it is a list of of list of str
+    # Iterate list_coitems - it is a list of of list of str
     #print(' Calculating network edges...')
     pbar = tqdm(total=len(list_coitems))
     pbar.set_description('Calculating network edges...') 
@@ -54,12 +54,42 @@ def construct_edges_list(list_unique_items,
     return all_edges
 
 def create_network_from_edge_wei_list(all_edges,
-                                      nr_vertices,
+                                      nr_vertices = None,
+                                      labels = None,
                                       directed = False,
                                       multiple = True,
                                       loops = False, 
                                       combine_edges = 'mean'):
-    net = Graph(directed=directed)
+    '''
+    Create a igraph object from the list of edges all_edges
+    
+    Input
+    -----
+    all_edges: list of tuples of int specifying pairs of nodes (each a unique 
+        int) that are connected (returned from construct_edges_list)
+    
+    nr_vertices: int, default None, a positive integer specyfying the number 
+        of vertices in the graph
+        
+    labels: a list of str of len == nr_vertices containing the labels of each
+        vertex
+        
+    directed: bool, default False, specyfying if the graph is directed
+
+    multiple: bool, default True, allow multiple edges to exist in the graph
+
+    loops: bool, default False, allow self-self conenctions
+
+    combine_edges: str, default 'mean', specyfying how edge wweights are 
+        combined when simplifying the graph
+        See https://igraph.org/python/doc/igraph.GraphBase-class.html#simplify 
+        
+    
+    Output
+    ------
+    net: igraph object
+    '''
+    net = Graph(directed = directed)
     net.add_vertices(nr_vertices)
     
     # Create a counter object that summarizes unique edges and their occurence
@@ -74,57 +104,11 @@ def create_network_from_edge_wei_list(all_edges,
 
     # Construct the graph with or without loops (self-self connections) and 
     # multiple edges and combine edges based on the combine_edges str param 
-    net.simplify(multiple=multiple, 
-                 loops=loops, 
-                 combine_edges=combine_edges
+    net.simplify(multiple = multiple, 
+                 loops = loops, 
+                 combine_edges = combine_edges
                  )
-        
-    return net, edges, weights
-
-def compute_graph(pub_list, item='authors'):
-    """
-    Args:
-        pub_list: list of Publication objects
-        
-        item: {'authors', 'affiliation'}, default 'authors', 
-            where to create graph on
-    Returns:
-        net: an igraph object describing the relation between the items in the
-            form of a graph. 
-            Note that labels of each node are contained in:
-            net.vs['label']
-        
-        co_items: the list of co-appearing items
-    """
-    co_items = []    
-    pbar = tqdm(total=len(pub_list))
-    pbar.set_description('Extracting '+ item)
-    for pub in pub_list:
-        # Make a co_author_list from the current pub object
-        if item == 'authors':
-            current_co_items = [author.forename + ' ' + author.lastname for author in pub.authors]
-        if item == 'affiliations':    
-            current_co_items = [affil.name for affil in pub.get_unique_affiliations()]
-        co_items.append(current_co_items)
-        pbar.update(1)    
-    pbar.close()
-    
-    # Create edge list
-    unique_items = list(set([x for sublist in co_items for x in sublist]))
-    all_edges = construct_edges_list(unique_items, 
-                                     list_coitems=co_items,
-                                     exclude=[]
-                                     )
-    
-    # create igraph network
-    (net, 
-     _, 
-     _) = create_network_from_edge_wei_list(all_edges,
-                                             nr_vertices = len(unique_items)
-                                             )
-    
     # Add the unique_items as labels to the igraph object
-    net.vs['label'] = unique_items 
+    net.vs['label'] = labels
     
-    return net, co_items           
-                
+    return net

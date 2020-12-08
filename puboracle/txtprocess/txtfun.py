@@ -26,8 +26,6 @@ def remove_digits_from_str(s):
     s_digit_removed = ''.join([i for i in s if not i.isdigit()])
     return s_digit_removed
 
-
-
 def convert_str_float_comma(list_str_comma):
     '''
     Convert a list of floats that have commas ',' instead of dots '.' to denote
@@ -143,7 +141,7 @@ def remove_email_txtinparen(lst_str,
     i.  email address 
     ii. text in parentheses
     iii. the word "and" from the beginning of a string 
-    iv. strings with length of string below len_threshold 
+    iv. strings with length of string below len_threshold  
     
     Input
     -----
@@ -172,5 +170,33 @@ def remove_email_txtinparen(lst_str,
         
     return lst_str_cleaned
         
+def keep_only_alpha(string):
+    '''
+    Keep only alphabetical characters in string
+    Processed string is also l+r stripped to remove whitespaces
     
+    Input
+    -----
+    string: str, to be processed
+    
+    Output
+    -----
+    str, processed and stripped string
+    '''
+    return re.sub(r"[^a-zA-Z]+", ' ', string).rstrip().lstrip()
+
+def keep_only_alphanum(string):
+    '''
+    Keep only alphanumerical characters in string
+    Processed string is also l+r stripped to remove whitespaces
+    
+    Input
+    -----
+    string: str, to be processed
+    
+    Output
+    -----
+    str, processed and stripped string
+    '''
+    return  re.sub(r"[^a-zA-Z0-9]+", ' ', string).rstrip().lstrip()     
     
