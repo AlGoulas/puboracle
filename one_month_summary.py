@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import math
 from pathlib import Path
-import re
 
 from puboracle.writestoredata import getdata,readwritefun
 from puboracle.txtprocess import txt2geo, txtfun
@@ -14,12 +13,13 @@ from puboracle.metrics import netmetrics
 # info on geospatial location of research activity, networks of collaborations
 # and related matrics
 
-# This example tracks publications with the key word "connectome" in 2020
+# This example tracks publications with the key word "connectome" or 
+# "connectomics" in the last 30 days
 
 # Submit query and fetch data in an XML format
-save_folder = '/Users/alexandrosgoulas/Data/example_puboracle_connectomics/xmldata/'
+save_folder = '/Users/alexandrosgoulas/Data/work-stuff/projects/example_puboracle_connectomics/xmldata/'
 query = 'connectomics OR connectome'
-days = 365
+days = 30
 email = 'arimpos@gmail.com'
 
 getdata.fetch_write_data(
@@ -55,20 +55,6 @@ affiliations = pub_data[keys_to_parse.index('affiliations')]
 # ii. author names or initials in parentheses (can also remove acronyms of location but this is OK)   
 # iii. the word "and" from the beginning of an affiliation 
 # iv. length of affiliation above len_threshold 
-# affiliations_cleaned = []
-# indexes_empty = []
-# len_threshold = 15
-# for i,affil in enumerate(affiliations):
-#     cleaned = re.sub("[\(\[].*?[\)\]]", "", affil)#remove text in parentheses
-#     cleaned = re.sub("\S*@\S*\s?", "", cleaned).rstrip()#remove email address
-#     cleaned = cleaned.replace('electronic address:','')# remove 'electronic address:'
-#     cleaned = cleaned.replace('Electronic address:','')# remove 'Electronic address:'
-#     cleaned = re.sub("^\sand", "", cleaned)# remove 'and' from the beggining (preceeded by whitespace)
-#     if not cleaned or len(cleaned) <= len_threshold:
-#         indexes_empty.append(i)
-#     else:    
-#         affiliations_cleaned.append(cleaned.lstrip())#remove potential leading whitespace
-
 affiliations_cleaned = txtfun.remove_email_txtinparen(affiliations,
                                                       len_threshold = 12,
                                                       delimeter = ';'
@@ -83,13 +69,13 @@ affiliations_cleaned = txtfun.remove_email_txtinparen(affiliations,
 
 # Extract lat lot
 lat,lon,txtforloc = txt2geo.get_lat_lon_from_text(
-                                                  unique_affiliations_cleaned[-11:-20:-1],
+                                                  unique_affiliations_cleaned[:10],
                                                   geophrase_delimeter = ',',
                                                   verbose = True,
                                                   reverse = False,
-                                                  only_alpha = False,
-                                                  user_agent = 'geocoding tryout',
-                                                  rand_wait_time_sec = 2
+                                                  clean_string = 'unicode',
+                                                  user_agent = 'geocoding test',
+                                                  min_delay_seconds = 1
                                                   )
 
 
@@ -112,22 +98,21 @@ visfun.visualize_counter_selection(affiliations_nrpubs_topmerged)
   
 
 co_occurying = [ac.split(';') for ac in affiliations_cleaned]
-
-#%%                                                   
+                                                  
 # Construct the collaboration network based on affiliations.
 all_edges = netmetrics.construct_edges_list(unique_affiliations_cleaned, 
                                             list_coitems = co_occurying,
                                             exclude=[]
                                             ) 
-#%%
-net, _, _ = netmetrics.create_network_from_edge_wei_list(all_edges,
-                                                         nr_vertices = len(unique_affiliations_cleaned),
-                                                         labels = unique_affiliations_cleaned
-                                                        )
+
+net = netmetrics.create_network_from_edge_wei_list(all_edges,
+                                                   nr_vertices = len(unique_affiliations_cleaned),
+                                                   labels = unique_affiliations_cleaned
+                                                  )
 
 #Visualize with MDS the affiliation-to-affiliation network
 layt = net.layout_mds()
-filename_save = '/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/text_oracle/figs_puboracle_example' 
+filename_save = '/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/text_oracle/figs_puboracle_example/affil_net.html' 
 visfun.plot_graph(layt,
                   net = net,
                   filename_save = filename_save,
