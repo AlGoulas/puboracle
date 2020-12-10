@@ -1,90 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import numpy as np
-import time
 
 from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderTimedOut
+from geopy.extra.rate_limiter import RateLimiter
 import pycountry
-
 
 from . import txtfun
 
-# def get_lat_lon_from_text(all_txt_location, 
-#                           abstract_to_specific=False
-#                           ):
-#     '''
-#     Get spatial information (latitude, longitude) from textual description
-#     of locations
-    
-#     Input
-#     -----
-#     all_txt_location: list of str with the textual description of the location
-#         The str of each list S can be comma ';' seperated, so grouped textual
-#         descriptions, as str M, can be processed per list entry.
-#         Moreover each M str in each main str S, can be comma ',' seperated,
-#         in a way that if split, then the substrings s1,2...n correspond
-#         from less to more abstract location description (see example).
-        
-#     abstract_to_specific: bool, default False, if True the longitude and 
-#         latitude will be searched by using abstract to more specific textual
-#         descriptions of location.
-        
-#     Output
-#     ------ 
-#     lat: list of float, with the decoded latitude from the textual description
-#     lan: list of float, with the decoded longitude from the textual description
-#     full_txt_location: list of str, with the textual description used for 
-#         extracting lat and lon
-    
-#     Examples
-#     --------
-#     affil = ['Nova Southeastern University, College of Osteopathic Medicine, Fort Lauderdale, FL 33134, USA.;Zhejiang University, College of Pharmaceutical Science, Zhejiang Province 310027, PR China.'] 
-#     lat, lon, full_txt_location  = get_lat_lon_from_text(affil)
-#     '''
-#     geolocator = Nominatim(user_agent='test_affiliation_plot')
-#     lat=[]
-#     lon=[]
-#     full_txt_location = []
-#     nr_txt_loc = len(all_txt_location)
-#     # Iterate all lists in all_txt_location
-#     for counter,current_affil in enumerate(all_txt_location):
-#         print('\nUnpacking textual location descriptions...:', counter+1, '/', nr_txt_loc)
-#         current_affil_split = current_affil.rsplit(';')#str is a comma (;) seperated str with affiliations
-#         for loc in current_affil_split:
-#             print('\nSearching for latitude and longitude for location description:', loc)
-#             full_txt_location.append(loc)#keep the textual description of the location
-#             loc_split = loc.rsplit(',')#str is a comma (,) seperated str with specific to abstract text of the location
-#             location = None
-#             # Loop through the loc_split which is a textual location
-#             # description from concrete to abstract, where more concrete 
-#             # location is in loc_split[0] and more abstract in loc_split[-1] 
-#             # If abstract_to_specific is True, then reverse the list
-#             # loc_split so that we iterate the location text from abstract to 
-#             # concrete.
-#             if abstract_to_specific is True:
-#                 loc_split = loc_split[::-1]
-#             for l in loc_split:
-#                 location = geolocator.geocode(txtfun.remove_digits_from_str(l))
-#                 if location is not None: break#if valid location is returned, exit 
-#             if location is None:
-#                 print('\nNo latitude and longitude for...:', loc_split)
-#                 lat.append(np.nan)
-#                 lon.append(np.nan)
-#             else:
-#                 lat.append(location.latitude)
-#                 lon.append(location.longitude)
-            
-#     return lat, lon, full_txt_location
-
 def get_lat_lon_from_text(all_txt_location,
                           geophrase_delimeter = ',',
-                          only_alpha = True,
+                          clean_string = None,
                           reverse = True,
                           verbose = False, 
                           user_agent = 'testing',
-                          max_attempts = 5,
-                          rand_wait_time_sec = 2,
+                          min_delay_seconds = 1,
+                          timeout = 10
                           ):
     '''
     Get latitude and longitude information by using individual words from 
@@ -95,8 +26,19 @@ def get_lat_lon_from_text(all_txt_location,
         
         Strings can be ';' comma-seperated and in that case the will be split
         and each part processed sequentially
+    
+    geophrase_delimeter: str, default ',', that is used to split the text in
+        substrings (geophrases) to be used for geocoding
+    
+    clean_string: str, {'unicode','alphanum', 'alpha'}, default None, 
+        specifying if the text to be used for geocoding should be processed
+            'unicode': only unicode characters are kept
+            'alphanum': only alphanumeric characters are kept
+            'alpha': only alphabetical characters (A-Za-Z) are kept
+    
+    reverse: bool, default True, reversing the order of geophrases found 
+        in a string
         
-    reverse: bool, default True, reversing the order of words found in a string
         This is usefull if we want to exploit a string where spatial
         location is structured, e.g. in an affiliation words specify location
         in a concrete-to-abstract with cities and countries being at the
@@ -104,14 +46,15 @@ def get_lat_lon_from_text(all_txt_location,
         
     user_agent: str, default 'testing', specifying user id
         (used by: geopy.geocoders Nominatim)
-        
-    max_attempts: int, default 5, indicating the maximum attempts made for
-        geolocation
-        
-    rand_wait_time_sec: int, default None, specifying at random the seconds that 
-        we must wait before sending a request to the server for geolocation
+                
+    min_delay_seconds: int, default 1, specifying the seconds that 
+        we must wait before sending a request to the server for geocoding
         between [1,rand_wait_time_sec]
-        So at least 1 sec of waiting time
+        So at least 1 sec of waiting time as NEEDED from the Nominatim 
+        geocoder of geopy
+      
+    timeout: int, default 10, specifying the time waiting before the server for
+        the geocoding times out
         
     Output
     ------
@@ -146,7 +89,11 @@ def get_lat_lon_from_text(all_txt_location,
     print(txt)
     ['Arizona', 'Germany', 'Bordeaux']
     '''
-    geolocator = Nominatim(user_agent = user_agent, timeout = 10)
+    geolocator = Nominatim(user_agent = user_agent, timeout = timeout)
+    if min_delay_seconds is not None:#if wait time specified use a RateLimiter
+        geocode = RateLimiter(geolocator.geocode, min_delay_seconds = min_delay_seconds) 
+    else:
+        geocode = geolocator.geocode   
     lat=[]
     lon=[]
     full_txt_location = []
@@ -163,24 +110,14 @@ def get_lat_lon_from_text(all_txt_location,
         if reverse is True:atl_split = atl_split[::-1]#reverse so that we process the city faster (with affiliation formats, city usually near the end)
         atl_split_not_found = []#keep here all the strings that did not lead to geolocation for each step (not for all in all_txt_location)
         for loc in atl_split:
-            if only_alpha is True: 
-                loc = txtfun.keep_only_alpha(loc)
-            else:
-                loc = txtfun.keep_only_alphanum(loc)
+            if clean_string == 'unicode': loc = txtfun.keep_only_unicode(loc)
+            if clean_string == 'alphanum': loc = txtfun.keep_only_alphanum(loc)
             location = None    
             if loc:#if the processed string in non empty, start geocoding
                 if verbose is True:
                     print('\nGeolocation based on...:', loc)
-                #Go the geocoding within a loop to avoid issues with the server
-                attempt = 1
-                while attempt <= max_attempts:
-                    try:
-                        if rand_wait_time_sec is not None:time.sleep(np.random.randint(1,rand_wait_time_sec+1))#wait at least 1 sec
-                        location = geolocator.geocode(loc)
-                        attempt = max_attempts + 1
-                    except:
-                        print("\nAttempt...:" + str(attempt) + "/" + str(max_attempts) + " failed")
-                        attempt += 1
+                #Geocoding
+                location = geocode(loc)                                        
                 if location is None:atl_split_not_found.append(loc)
                 if location is not None:
                     full_txt_location.append(loc)#keep the textual description of the location that resulted in the lat lon

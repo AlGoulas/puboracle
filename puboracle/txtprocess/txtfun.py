@@ -200,3 +200,17 @@ def keep_only_alphanum(string):
     '''
     return  re.sub(r"[^a-zA-Z0-9]+", ' ', string).rstrip().lstrip()     
     
+def keep_only_unicode(string):
+    '''
+    Keep only unicode characters in string
+    Processed string is also l+r stripped to remove whitespaces
+    
+    Input
+    -----
+    string: str, to be processed
+    
+    Output
+    -----
+    str, processed and stripped string
+    '''
+    return re.sub(r"[^\w]+", ' ', string).rstrip().lstrip()
