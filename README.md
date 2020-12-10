@@ -3,11 +3,11 @@ Extracting insights from scientific publications in the life sciences
 ![puboracle](puboracle.png)
 
 # Description
-*puboracle* is a package that combines text mining, natural language processing, and geolocation to offer key information that pertain to the domain of scientific publications in the life sciences. 
+*puboracle* is a package that combines text mining, natural language processing, and geocoding to extract key information that pertains to the domain of scientific publications in the life sciences. 
 
-The package offers a collection of functions for mining, analyzing and visualizing textutal information and meta-data related to published scientific articles.
+The package offers a collection of functions for mining, analyzing and visualizing textual information and meta-data related to published scientific articles.
 
-The package facilitates obraining an overview of research activity (e.g., the location of resarch hubs across the globe) in relation to keywords of interest (e.g., stroke-related research) in a compact way.
+The package facilitates obtaining an overview of research activity (e.g., the location of resarch hubs across the globe) in relation to keywords of interest (e.g., stroke-related research) in a compact way.
 
 Key insights spanning several years of research output in the domain of life sciences can be obtained in few lines of code, offering a plethora of analysis by combining the functions offered from this package in different ways.
 
@@ -24,7 +24,7 @@ pip install .
 `
 
 # Example
-The package comes with a Jupyter Notebook that shocases how *puboracle* can be used. The example in the notebook offers insights into articles that were published in the last 30 days. Specifcially, the following key information is extracted and visualized:
+The package comes with a Jupyter Notebook that showcases how *puboracle* can be used. The example in the notebook offers insights into articles that were published in the last 30 days. Specifically, the following key information is extracted and visualized:
 
 i. Geospatial information concerning the location (longitude and latitude) of the institutes or universitites where the published research took place. 
 
