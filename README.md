@@ -35,16 +35,16 @@ iii. Network of collaborations among the universitites and institutes where the 
 # Citation
 If you find any of the functions of this package useful, please do cite it as follows:
 
-`
-@misc{Goulas2020,
-author = {Goulas, Alexandros},
-title = {puboracle},
-year = {2020},
-publisher = {GitHub},
-journal = {GitHub repository},
-howpublished = {\url{https://github.com/AlGoulas/puboracle}}
+```
+@misc{puboracle,
+  author = {Goulas, Alexandros},
+  title = {puboracle: Text mining of scientific publications},
+  year = {2020},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/AlGoulas/puboracle}},
 }
-`
+```
 
 
 
