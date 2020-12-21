@@ -37,12 +37,12 @@ If you find any of the functions of this package useful, please do cite it as fo
 
 `
 @misc{Goulas2020,
-  author = {Goulas, Alexandros},
-  title = {puboracle},
-  year = {2020},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/AlGoulas/puboracle}}
+author = {Goulas, Alexandros},
+title = {puboracle},
+year = {2020},
+publisher = {GitHub},
+journal = {GitHub repository},
+howpublished = {\url{https://github.com/AlGoulas/puboracle}}
 }
 `
 
