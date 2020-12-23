@@ -3,6 +3,8 @@
 from os import listdir
 from os.path import isfile, join
 import re
+import sqlite3
+from sqlite3 import Error
 
 import pubmed_parser as pp
 
@@ -12,7 +14,7 @@ def get_files_in_folder(folder_path, order=False):
     
     Input
     -----
-    folder_path: pathlib.PosixPath object cotnaining the folder path 
+    folder_path: pathlib.PosixPath object containing the folder path 
     
     order: bool, default False, denoting if the file names should be 
         reoardered based on one digit that they filenames may contain,
@@ -128,7 +130,10 @@ def read_xml_to_dict(folder_to_xmls,
         # but this does not appear to be the case. 
         # Instead parse_medline_xml() gets the desired info from the xml files. 
         # To be further checked.  
-        dicts_out = pp.parse_medline_xml(str(folder_to_xmls/current_xml))
+        dicts_out = pp.parse_medline_xml(
+                                        str(folder_to_xmls/current_xml),
+                                        author_list=True#this returns an author list with the names AND the affiliation!
+                                        )
         for d in dicts_out:
             for i, key in enumerate(keys_to_parse):
                 try:
@@ -142,4 +147,38 @@ def read_xml_to_dict(folder_to_xmls,
                 except:
                     print('\nKey ', key, ' not found!')
                       
-    return all_values, xml_file    
+    return all_values, xml_file  
+
+def sql_create_db(db_folder, db_filename = None):
+    '''
+    Create a database connection to a SQLite database 
+    
+    Input
+    -----
+    db_folder: pathlib.PosixPath object containing the folder path 
+    db_filename: str, denoting the name of the database 
+    
+    Output
+    ------
+    conn: Connection object
+    '''
+    conn = None
+    try:
+        conn = sqlite3.connect(db_folder / db_filename)
+        return conn
+    except Error as e:
+        print(e)
+            
+def sql_create_table(conn, create_table_sql = None):
+    '''
+    Create a table from the create_table_sql statement
+    
+    conn: Connection object
+    create_table_sql: a CREATE TABLE statement
+    '''
+    try:
+        c = conn.cursor()
+        c.execute(create_table_sql)
+    except Error as e:
+        print(e)
+        
