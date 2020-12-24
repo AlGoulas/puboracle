@@ -7,7 +7,6 @@ from puboracle.writestoredata import getdata,readwritefun
 from puboracle.txtprocess import txt2geo, txtfun
 from puboracle.visualization import visfun
 from puboracle.metrics import txtmetrics
-from puboracle.metrics import netmetrics
 
 # This project showcases how puboracle can be used to mine PubMed and extract 
 # info on geospatial location of research activity, networks of collaborations
@@ -39,82 +38,123 @@ all_xml_files = readwritefun.get_files_in_folder(folder_to_xmls,
 # Read the XML files and extract the desired info specified by the list 
 # keys_to_parse 
 keys_to_parse = [
-                 'affiliations'
+                 'authors',
+                 'journal',
+                 'title',
+                 'pubdate',
+                 'abstract',
+                 'pmid'
                 ]
 
-pub_data, xml_filenames = readwritefun.read_xml_to_dict(folder_to_xmls, 
-                                                        all_xml_files = all_xml_files,
-                                                        keys_to_parse = keys_to_parse
-                                                        )
-
-# Extract affiliations
-affiliations = pub_data[keys_to_parse.index('affiliations')]
-                                 
-# Remove unwanted elements from affiliations:
-# i.  email address 
-# ii. author names or initials in parentheses (can also remove acronyms of location but this is OK)   
-# iii. the word "and" from the beginning of an affiliation 
-# iv. length of affiliation above len_threshold 
-affiliations_cleaned = txtfun.remove_email_txtinparen(affiliations,
-                                                      len_threshold = 12,
-                                                      delimeter = ';'
-                                                      ) 
- 
-# Get all the unique cleaned affiliations     
-(all_affiliations_cleaned, 
- unique_affiliations_cleaned, 
- occurences) = txtmetrics.get_unique_strs(affiliations_cleaned,
-                                          exclude=['', ' ']
-                                          )
-
-# Extract lat lot
-lat,lon,txtforloc = txt2geo.get_lat_lon_from_text(
-                                                  unique_affiliations_cleaned[:10],
-                                                  geophrase_delimeter = ',',
-                                                  verbose = True,
-                                                  reverse = False,
-                                                  clean_string = 'unicode',
-                                                  user_agent = 'geocoding test',
-                                                  min_delay_seconds = 1
-                                                  )
-
-
-# Remove nan from lat lon and visualize the rest
-lat = [item for item in lat if not math.isnan(item)]
-lon = [item for item in lon if not math.isnan(item)]
-visfun.vis_lon_lat(longitude=lon, latitude=lat)
-
-# Visualize top 5 of affiliations with the max publications
-# Do so after the merge of nr of publications between affiliations
-# that exceed a string similarity threshold
-(affiliations_nrpubs_topmerged, 
- _) = txtmetrics.add_by_similarity(occurences, 
-                                   topN = 10, 
-                                   look_ahead = 100,
-                                   threshold = 0.8
+# Create SQL database if it does not exist
+db_folder = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/sqlite_tryout')
+db_filename = 'ndays_pubmed.db'
+conn = readwritefun.sql_create_db(db_folder,
+                                  db_filename = db_filename
                                   )
-                                                     
-visfun.visualize_counter_selection(affiliations_nrpubs_topmerged)
-  
 
-co_occurying = [ac.split(';') for ac in affiliations_cleaned]
-                                                  
-# Construct the collaboration network based on affiliations.
-all_edges = netmetrics.construct_edges_list(unique_affiliations_cleaned, 
-                                            list_coitems = co_occurying,
-                                            exclude=[]
-                                            ) 
+# Create table publications if it does not exists
+sql_table = """ CREATE TABLE IF NOT EXISTS publications (
+                                   id integer PRIMARY KEY,
+                                   first_author_first_name text,
+                                   first_author_last_name text,
+                                   pub_year text,
+                                   authors text,
+                                   journal text,
+                                   title text,
+                                   abstract text,
+                                   affiliations text,
+                                   pubmed_id integer
+                               ); """
 
-net = netmetrics.create_network_from_edge_wei_list(all_edges,
-                                                   nr_vertices = len(unique_affiliations_cleaned),
-                                                   labels = unique_affiliations_cleaned
-                                                  )
+readwritefun.sql_create_table(conn, 
+                              sql_table = sql_table
+                              )
 
-#Visualize with MDS the affiliation-to-affiliation network
-layt = net.layout_mds()
-filename_save = '/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/text_oracle/figs_puboracle_example/affil_net.html' 
-visfun.plot_graph(layt,
-                  net = net,
-                  filename_save = filename_save,
-                  title = 'Collaborations between affiliations'
-                  )
+# Read one-by-one the xml files and insert rows in the database 
+len_threshold = 12#len threshold for keeping an affiliation
+delimeter = ';'#delimeter for seperating multiple affiliations and authors
+start_sql_int = 0
+stop_sql_int = 0
+ids = None
+for axf in all_xml_files:
+    pub_data, _ = readwritefun.read_xml_to_dict(folder_to_xmls, 
+                                                all_xml_files = [axf],
+                                                keys_to_parse = keys_to_parse
+                                                )
+    
+    # Extract journal, title pubdate and abstract
+    journal = pub_data[keys_to_parse.index('journal')]
+    title = pub_data[keys_to_parse.index('title')]
+    pubdate = pub_data[keys_to_parse.index('pubdate')]
+    abstract = pub_data[keys_to_parse.index('abstract')]
+    pmid = pub_data[keys_to_parse.index('pmid')]
+       
+    # Unpack the authors list and dictionaries to get first, last name and 
+    # affiliation
+    authors_affiliations = pub_data[0]
+    all_affiliations = []
+    all_author_list = []
+    all_first_author_first_name = []
+    all_first_author_last_name = []  
+    for aa in authors_affiliations:
+        affil = [current_aa['affiliation'] for current_aa in aa]
+        if any(a for a in affil):#if list contains any non-empty affiliations then join them 
+            affil = delimeter.join(affil)
+        else:
+            affil = ''
+        all_affiliations.append(affil)
+        #Get first and last name
+        first_name = [current_aa['forename'] for current_aa in aa]
+        last_name = [current_aa['lastname'] for current_aa in aa]
+        all_first_author_first_name.append(first_name[0])
+        all_first_author_last_name.append(last_name[0]) 
+        # Wrap every first and last name in a string seperating each author 
+        # with delimeter  
+        first_last_authorlist = [fl[0] + ',' + fl[1] for fl in zip(first_name,last_name)]
+        first_last_authorlist = delimeter.join(first_last_authorlist)
+        all_author_list.append(first_last_authorlist)
+                            
+    # Remove unwanted elements from affiliations:
+    # i.  email address 
+    # ii. author names or initials in parentheses (can also remove acronyms of location but this is OK)   
+    # iii. the word "and" from the beginning of an affiliation 
+    # iv. length of affiliation above len_threshold 
+    all_affiliations_cleaned = txtfun.remove_email_txtinparen(all_affiliations,
+                                                              delimeter = delimeter
+                                                              ) 
+    
+    # Insert simultaneously the row corresponing to his xml file in the 
+    # sql database
+    # We create a tuple for each row  assembled in a list for simultaneous 
+    # insertion
+    if ids is None:
+        start_sql_int = 0
+        stop_sql_int = len(all_affiliations_cleaned)  
+    ids = list(range(start_sql_int, stop_sql_int))#create unique integer primary ids 
+    # TODO this looks redundant since it seems an automatic thign that sqlite 
+    # should do - check what is the case
+    all_rows = [ids,
+                all_first_author_first_name,
+                all_first_author_last_name,
+                pubdate,
+                all_author_list,
+                journal,
+                title,
+                abstract,
+                all_affiliations_cleaned,
+                pmid
+                ]
+    
+    start_sql_int = start_sql_int + len(all_first_author_first_name)
+    stop_sql_int = stop_sql_int + len(all_first_author_first_name)
+    
+    all_rows = [ar for ar in zip(*all_rows)]
+    sql_insert = 'INSERT INTO publications VALUES(?,?,?,?,?,?,?,?,?,?);'
+    readwritefun.sql_insert_many_to_table(sql_insert, 
+                                          rows = all_rows, 
+                                          conn = conn
+                                         )
+    
+
+

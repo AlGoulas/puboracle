@@ -35,60 +35,6 @@ def get_files_in_folder(folder_path, order=False):
     
     return filenames  
 
-def read_swap_write(path_file_for_edit, 
-                    path_new_file = None, 
-                    filename_new = None,
-                    str_to_swap1 = None,
-                    str_to_swap2 = None
-                    ):
-    '''
-    Read file and replace str i in list_to_replace[i] with list_new[i]
-    
-    Input
-    -----
-    path_file_for_edit: pathlib.PosixPath object denoting the full path of the 
-        the file to be read.
-        
-    path_new_file: pathlib.PosixPath object denoting the folder path
-       where the file will be stored. 
-       
-    filename_new: str, denoting the name of file to be stored.
-     
-    str_to_replace: list of str, containing all the str to be replaced in the
-        file with path_to_file full path, i.e.
-        list_to_replace[i] will be replaced by list_new[i]  
-     
-    str_replacement: list of str, containing all the str for replacing the str in the
-        file with path_to_file full path, i.e.
-        list_to_replace[i] will be replaced by list_new[i]      
-    '''
-    # Open the path_file_for_edit and read it line by line
-    # Open the new file as well
-    f_read = open(path_file_for_edit, 'r')
-    path_to_save = path_new_file / filename_new
-    f_write = open(path_to_save, 'w')
-    
-    # Read the file line by line and check each time if any of 
-    # str_to_swap1 and str_to_swap2 is present
-    for line in f_read:
-        # Mark the positions with "place holders strings"
-        # to be subsequently replaced with the actual strings
-        # This avoids problems when both strings to be swapped are present
-        # in the current line
-        if str_to_swap1 in line:
-            line = line.replace(str_to_swap1, 'str_to_swap1')
-        if str_to_swap2 in line:
-            line = line.replace(str_to_swap2, 'str_to_swap2')    
-        # Replace with the actual strings 
-        if 'str_to_swap1' in line:
-            line = line.replace('str_to_swap1', str_to_swap2)
-        if 'str_to_swap2' in line:
-            line = line.replace('str_to_swap2', str_to_swap1)     
-            
-        f_write.write(line)    
-        
-    f_read.close() 
-    f_write.close() 
     
 def read_xml_to_dict(folder_to_xmls, 
                      all_xml_files = None,
@@ -132,7 +78,7 @@ def read_xml_to_dict(folder_to_xmls,
         # To be further checked.  
         dicts_out = pp.parse_medline_xml(
                                         str(folder_to_xmls/current_xml),
-                                        author_list=True#this returns an author list with the names AND the affiliation!
+                                        author_list = True#this returns an author list with the names AND the affiliation!
                                         )
         for d in dicts_out:
             for i, key in enumerate(keys_to_parse):
@@ -169,7 +115,7 @@ def sql_create_db(db_folder, db_filename = None):
     except Error as e:
         print(e)
             
-def sql_create_table(conn, create_table_sql = None):
+def sql_create_table(conn, sql_table = None):
     '''
     Create a table from the create_table_sql statement
     
@@ -178,7 +124,19 @@ def sql_create_table(conn, create_table_sql = None):
     '''
     try:
         c = conn.cursor()
-        c.execute(create_table_sql)
+        c.execute(sql_table)
     except Error as e:
         print(e)
-        
+
+def sql_insert_many_to_table(sql_insert, 
+                             rows = None, 
+                             conn = None,
+                             verbose = True
+                             ):
+    c = conn.cursor()
+    c.executemany(sql_insert, rows)
+    conn.commit()
+    if verbose is True:
+        print('\nWe have inserted', c.rowcount, ' rows')
+            
+                
