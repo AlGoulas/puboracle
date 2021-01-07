@@ -24,7 +24,7 @@ def get_lat_lon_from_text(all_txt_location,
     all_txt_location: list of str, len M, containing the strings to be used
         for extracting latitude and longitude information
         
-        Strings can be ';' comma-seperated and in that case the will be split
+        Strings can be ';' comma-seperated and in that case they will be split
         and each part processed sequentially
     
     geophrase_delimeter: str, default ',', that is used to split the text in

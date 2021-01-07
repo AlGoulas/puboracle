@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import math
 from pathlib import Path
 
 from puboracle.writestoredata import getdata,readwritefun
-from puboracle.txtprocess import txt2geo, txtfun
-from puboracle.visualization import visfun
-from puboracle.metrics import txtmetrics
+from puboracle.txtprocess import txtfun
 
 # This project showcases how puboracle can be used to mine PubMed and extract 
 # info on geospatial location of research activity, networks of collaborations
@@ -48,14 +45,13 @@ keys_to_parse = [
 
 # Create SQL database if it does not exist
 db_folder = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/sqlite_tryout')
-db_filename = 'ndays_pubmed.db'
+db_filename = 'ndays_pubmed_noprimary.db'
 conn = readwritefun.sql_create_db(db_folder,
                                   db_filename = db_filename
                                   )
 
 # Create table publications if it does not exists
 sql_table = """ CREATE TABLE IF NOT EXISTS publications (
-                                   id integer PRIMARY KEY,
                                    first_author_first_name text,
                                    first_author_last_name text,
                                    pub_year text,
@@ -128,13 +124,7 @@ for axf in all_xml_files:
     # sql database
     # We create a tuple for each row  assembled in a list for simultaneous 
     # insertion
-    if ids is None:
-        start_sql_int = 0
-        stop_sql_int = len(all_affiliations_cleaned)  
-    ids = list(range(start_sql_int, stop_sql_int))#create unique integer primary ids 
-    # TODO this looks redundant since it seems an automatic thign that sqlite 
-    # should do - check what is the case
-    all_rows = [ids,
+    all_rows = [
                 all_first_author_first_name,
                 all_first_author_last_name,
                 pubdate,
@@ -146,15 +136,12 @@ for axf in all_xml_files:
                 pmid
                 ]
     
-    start_sql_int = start_sql_int + len(all_first_author_first_name)
-    stop_sql_int = stop_sql_int + len(all_first_author_first_name)
-    
     all_rows = [ar for ar in zip(*all_rows)]
-    sql_insert = 'INSERT INTO publications VALUES(?,?,?,?,?,?,?,?,?,?);'
+    sql_insert = 'INSERT INTO publications VALUES(?,?,?,?,?,?,?,?,?);'
     readwritefun.sql_insert_many_to_table(sql_insert, 
                                           rows = all_rows, 
                                           conn = conn
                                          )
     
-
+conn.close()
 
