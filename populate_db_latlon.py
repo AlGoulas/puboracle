@@ -12,7 +12,7 @@ cursor = conn.cursor()
 cursor_updates = conn.cursor() 
 nr_rows = 10
 # Get affil from table affiliations that do not have lat and lon, that is: (0,0) 
-cursor.execute("SELECT rowid, affiliation FROM affiliations WHERE latitude=? , longitude=?", (0,0)) 
+cursor.execute("SELECT rowid, affiliation FROM affiliations WHERE latitude = ? AND longitude = ?", (0,0)) 
 counter = 1
 while 1:
     rows = cursor.fetchmany(nr_rows)
@@ -27,7 +27,7 @@ while 1:
                                                     verbose = True
                                                     ) 
         if isinstance(lat[0], float) and isinstance(lon[0], float):
-            cursor_updates.execute("""UPDATE affiliations SET latitude=? , longitude=? WHERE rowid = ?""", (lat[0], lon[0], current_row[0]))
+            cursor_updates.execute("""UPDATE affiliations SET latitude = ? , longitude = ? WHERE rowid = ?""", (lat[0], lon[0], current_row[0]))
             #conn.commit()#is it okay to perform this after each update?
             print('\nUpdated latitude: %.2f and longitude: %.2f for affiliation: %s' % (lat[0], lon[0], current_row[1]))
             print('\n')
