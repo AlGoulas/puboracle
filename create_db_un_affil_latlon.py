@@ -7,25 +7,21 @@ import sqlite3
 from puboracle.writestoredata import readwritefun
 
 db_folder = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/sqlite_tryout')
-db_filename = 'unique_affiliations.db'
+db_filename = 'unique_affiliations_geocode_city.db'
 conn_affiliations = readwritefun.sql_create_db(db_folder,
                                                db_filename = db_filename
                                               )
-
 # Create table publications if it does not exists
 sql_table = """ CREATE TABLE IF NOT EXISTS affiliations (
                                    affiliation text,
                                    latitude real,
                                    longitude real
                                ); """
-
 readwritefun.sql_create_table(conn_affiliations, 
                               sql_table = sql_table
                               )
-
 # Get a coursor to the newly created db
 cursor_affiliations = conn_affiliations.cursor()
-
 # Database from where the affiliations should be read
 db_filename_publications = 'ndays_pubmed_noprimary.db'
 conn_publications = sqlite3.connect(db_folder / db_filename_publications)
@@ -33,12 +29,11 @@ cursor_publications = conn_publications.cursor()
 cursor_publications.execute("SELECT affiliations FROM publications")
 nr_rows = 100
 affiliations_delimeter = ';'
-
 while 1:
     rows = cursor_publications.fetchmany(nr_rows)
     for i,row in enumerate(rows):
         unique_affiliations = []
-        print('\n\nProcessing row nr:',i)
+        print('\n\nProcessing row nr:', i)
         print(row)
         affils = row[0].split(';')
         affils = list(set(affils))
@@ -53,14 +48,11 @@ while 1:
             readwritefun.sql_insert_many_to_table(sql_insert, 
                                                   rows = unique_affiliations, 
                                                   conn = conn_affiliations
-                                                 )
-            
+                                                 )    
     if not rows: break
-
 
 cursor_affiliations.close()
 cursor_publications.close()
-
 conn_affiliations.close()
 conn_publications.close()
 

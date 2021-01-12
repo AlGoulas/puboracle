@@ -6,7 +6,7 @@ import sqlite3
 from puboracle.txtprocess import txt2geo
 
 db_folder = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/sqlite_tryout')
-db_filename = 'unique_affiliations.db'
+db_filename = 'unique_affiliations_geocode_city.db'
 conn = sqlite3.connect(db_folder / db_filename)
 cursor = conn.cursor()
 cursor_updates = conn.cursor() 
@@ -19,11 +19,14 @@ while 1:
     for i,current_row in enumerate(rows):
         print('\n\nIterating row nr:', counter)
         counter += 1
-        #Get the lat lot via geocoding
-        lat, lon, _ = txt2geo.get_lat_lon_from_text([current_row[1]],#second entry of tuple is the affiliation
+        # Get the latlon via geocoding
+        # Remove the country (last entry) and search by inversion of the list: less to more specific
+        current_affil = current_row[1].split(',')
+        current_affil = ','.join(current_affil[:-1])
+        lat, lon, _ = txt2geo.get_lat_lon_from_text([current_affil],#second entry of tuple is the affiliation
                                                     geophrase_delimeter = ',',
                                                     clean_string = 'unicode',
-                                                    reverse = False,
+                                                    reverse = True,
                                                     verbose = True
                                                     ) 
         if isinstance(lat[0], float) and isinstance(lon[0], float):
