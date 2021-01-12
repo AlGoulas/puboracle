@@ -25,7 +25,6 @@ getdata.fetch_write_data(
                         days = days,
                         save_folder = save_folder
                         )
-
 # Read all the XML files that were downloaded
 folder_to_xmls = Path('/Users/alexandrosgoulas/Data/work-stuff/projects/example_puboracle_connectomics/xmldata/')
 all_xml_files = readwritefun.get_files_in_folder(folder_to_xmls, 

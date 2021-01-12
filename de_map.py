@@ -21,15 +21,14 @@ def get_closer_dist(points, point_to_assign):
 def is_in_boundingbox(point, lat_limit, lon_limit):
     it_is = (lat_limit[0] <= point[0] <= lat_limit[1]) and ((lon_limit[0] <= point[1] <= lon_limit[1]))
     return it_is
-    
-    
+     
 plt.style.use('seaborn')
 plt.rcParams['figure.figsize'] = [12, 12]
 file = '/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/text_oracle/DE_maps/plz-gebiete.shp/plz-gebiete.shp'
 plz_shape_df = gpd.read_file(file, dtype={'plz': str})
 # Plot map with all the centroids of the polygons
 fig, ax = plt.subplots()
-plz_shape_df.plot(ax=ax, color='orange', alpha=0.8)
+#plz_shape_df.plot(ax=ax, color='orange', alpha=0.8)
 # Read the polygons from the df
 polygons = plz_shape_df['geometry']
 lat_center = []
