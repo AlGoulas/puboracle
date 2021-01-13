@@ -58,6 +58,8 @@ nr_rows = 100
 # Get affil from table affiliations that do not have lat and lon, that is: (0,0) 
 cursor_pub.execute("SELECT affiliations FROM publications") 
 counter = 1
+counter_de_plotted = 0
+counter_de_not_plotted = 0
 pubs_per_plz = [0] * len(plz_shape_df.index)
 while 1:
     rows = cursor_pub.fetchmany(nr_rows)
@@ -78,10 +80,13 @@ while 1:
                 print('\nCurrent affiliation:', ade)
                 print('\nCurrent lat: %.5f  lon: %.5f ' % (row[0], row[1]))
                 if is_in_boundingbox((row[0], row[1]), lat_limit, lon_limit):
+                    counter_de_plotted += 1
                     idx,dist = get_closer_dist(lat_lon_centers, np.asarray([[row[1], row[0]]]))
                     pubs_per_plz[idx] = pubs_per_plz[idx] + 1#assign the publication to plz with center closer to the lat lon of the current affil
                     print('\nidx:', idx)
                     print('\nmin dist:', dist)
+                else:
+                    counter_de_not_plotted += 1
                 # ax.plot(
                 #         row[1], 
                 #         row[0], 
@@ -95,17 +100,20 @@ cursor_pub.close()
 conn_pub.close()
 cursor_affil.close()
 conn_affil.close()
-
 plz_shape_df['values'] = pd.Series(np.asarray(pubs_per_plz), 
                                     index = plz_shape_df.index
                                     )
+import copy
+cmap = copy.copy(plt.cm.get_cmap('cool'))
+cmap.set_under(color='grey')    
 plz_shape_df.plot(
                     ax = ax, 
                     column = 'values', 
                     categorical = False, 
                     legend = True, 
-                    cmap = 'autumn_r',
-                    alpha = 0.8
+                    cmap = cmap,
+                    alpha = 0.8,
+                    vmin = 0.5
                   ) 
 ax.set(
         title='Publications in Germany', 
