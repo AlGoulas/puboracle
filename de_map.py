@@ -23,9 +23,11 @@ def is_in_boundingbox(point, lat_limit, lon_limit):
     return it_is
      
 plt.style.use('seaborn')
-plt.rcParams['figure.figsize'] = [12, 12]
+plt.rcParams['figure.figsize'] = [8, 12]
 file = '/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/text_oracle/DE_maps/plz-gebiete.shp/plz-gebiete.shp'
+#file = '/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/DE_maps/ge2500.gk3.shape/ge2500/ror2500/ROR2500.shp'
 plz_shape_df = gpd.read_file(file, dtype={'plz': str})
+#plz_shape_df = gpd.read_file(file)
 # Plot map with all the centroids of the polygons
 fig, ax = plt.subplots()
 #plz_shape_df.plot(ax=ax, color='orange', alpha=0.8)
