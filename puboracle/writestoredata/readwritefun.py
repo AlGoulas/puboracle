@@ -78,6 +78,7 @@ def read_xml_to_dict(folder_to_xmls,
         # To be further checked.  
         dicts_out = pp.parse_medline_xml(
                                         str(folder_to_xmls/current_xml),
+                                        year_info_only = False,
                                         author_list = True#this returns an author list with the names AND the affiliation!
                                         )
         for d in dicts_out:

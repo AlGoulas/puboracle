@@ -13,7 +13,7 @@ from puboracle.txtprocess import txtfun
 # "connectomics" in the last 30 days
 
 # Submit query and fetch data in an XML format
-save_folder = '/Users/alexandrosgoulas/Data/work-stuff/projects/example_puboracle_connectomics/xmldata/'
+save_folder = '/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/example_puboracle_connectomics/xmldata/'
 query = 'connectomics OR connectome'
 days = 30
 email = 'arimpos@gmail.com'
@@ -26,9 +26,9 @@ getdata.fetch_write_data(
                         save_folder = save_folder
                         )
 # Read all the XML files that were downloaded
-folder_to_xmls = Path('/Users/alexandrosgoulas/Data/work-stuff/projects/example_puboracle_connectomics/xmldata/')
+folder_to_xmls = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/example_puboracle_connectomics/xmldata/')
 all_xml_files = readwritefun.get_files_in_folder(folder_to_xmls, 
-                                                order = True
+                                                 order = True
                                                 )
 
 # Read the XML files and extract the desired info specified by the list 
@@ -39,32 +39,33 @@ keys_to_parse = [
                  'title',
                  'pubdate',
                  'abstract',
-                 'pmid'
+                 'pmid',
+                 'doi'
                 ]
 
 # Create SQL database if it does not exist
-db_folder = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/sqlite_tryout')
-db_filename = 'ndays_pubmed_noprimary.db'
-conn = readwritefun.sql_create_db(db_folder,
-                                  db_filename = db_filename
-                                  )
+# db_folder = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/sqlite_tryout')
+# db_filename = 'ndays_pubmed_noprimary.db'
+# conn = readwritefun.sql_create_db(db_folder,
+#                                   db_filename = db_filename
+#                                   )
 
-# Create table publications if it does not exists
-sql_table = """ CREATE TABLE IF NOT EXISTS publications (
-                                   first_author_first_name text,
-                                   first_author_last_name text,
-                                   pub_year text,
-                                   authors text,
-                                   journal text,
-                                   title text,
-                                   abstract text,
-                                   affiliations text,
-                                   pubmed_id integer
-                               ); """
+# # Create table publications if it does not exists
+# sql_table = """ CREATE TABLE IF NOT EXISTS publications (
+#                                    first_author_first_name text,
+#                                    first_author_last_name text,
+#                                    pub_year text,
+#                                    authors text,
+#                                    journal text,
+#                                    title text,
+#                                    abstract text,
+#                                    affiliations text,
+#                                    pubmed_id integer
+#                                ); """
 
-readwritefun.sql_create_table(conn, 
-                              sql_table = sql_table
-                              )
+# readwritefun.sql_create_table(conn, 
+#                               sql_table = sql_table
+#                               )
 
 # Read one-by-one the xml files and insert rows in the database 
 len_threshold = 12#len threshold for keeping an affiliation
@@ -135,12 +136,12 @@ for axf in all_xml_files:
                 pmid
                 ]
     
-    all_rows = [ar for ar in zip(*all_rows)]
-    sql_insert = 'INSERT INTO publications VALUES(?,?,?,?,?,?,?,?,?);'
-    readwritefun.sql_insert_many_to_table(sql_insert, 
-                                          rows = all_rows, 
-                                          conn = conn
-                                         )
+#     all_rows = [ar for ar in zip(*all_rows)]
+#     sql_insert = 'INSERT INTO publications VALUES(?,?,?,?,?,?,?,?,?);'
+#     readwritefun.sql_insert_many_to_table(sql_insert, 
+#                                           rows = all_rows, 
+#                                           conn = conn
+#                                          )
     
-conn.close()
+# conn.close()
 
