@@ -44,104 +44,117 @@ keys_to_parse = [
                 ]
 
 # Create SQL database if it does not exist
-# db_folder = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/sqlite_tryout')
-# db_filename = 'ndays_pubmed_noprimary.db'
-# conn = readwritefun.sql_create_db(db_folder,
-#                                   db_filename = db_filename
-#                                   )
+db_folder = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/sqlite_tryout')
+db_filename = 'pubmed_design1.db'
+conn = readwritefun.sql_create_db(db_folder,
+                                  db_filename = db_filename
+                                  )
 
-# # Create table publications if it does not exists
-# sql_table = """ CREATE TABLE IF NOT EXISTS publications (
-#                                    first_author_first_name text,
-#                                    first_author_last_name text,
-#                                    pub_year text,
-#                                    authors text,
-#                                    journal text,
-#                                    title text,
-#                                    abstract text,
-#                                    affiliations text,
-#                                    pubmed_id integer
-#                                ); """
+# Create table publications if it does not exists
+sql_table = """ CREATE TABLE IF NOT EXISTS publication (
+                                    pubmed_id INTEGER PRIMARY KEY,
+                                    pubdate_year TEXT,
+                                    pubdate_month TEXT,
+                                    pubdate_day TEXT,
+                                    journal_title TEXT,
+                                    article_title TEXT,
+                                    abstract TEXT,
+                                    doi TEXT
+                                ); """
 
-# readwritefun.sql_create_table(conn, 
-#                               sql_table = sql_table
-#                               )
+readwritefun.sql_create_table(conn, 
+                              sql_table = sql_table
+                              )
 
 # Read one-by-one the xml files and insert rows in the database 
 len_threshold = 12#len threshold for keeping an affiliation
-delimeter = ';'#delimeter for seperating multiple affiliations and authors
-start_sql_int = 0
-stop_sql_int = 0
-ids = None
 for axf in all_xml_files:
     pub_data, _ = readwritefun.read_xml_to_dict(folder_to_xmls, 
                                                 all_xml_files = [axf],
                                                 keys_to_parse = keys_to_parse
                                                 )
     
-    # Extract journal, title pubdate and abstract
-    journal = pub_data[keys_to_parse.index('journal')]
-    title = pub_data[keys_to_parse.index('title')]
+    # Extract desired data from the publication
+    journal_title = pub_data[keys_to_parse.index('journal')]
+    article_title = pub_data[keys_to_parse.index('title')]
     pubdate = pub_data[keys_to_parse.index('pubdate')]
     abstract = pub_data[keys_to_parse.index('abstract')]
     pmid = pub_data[keys_to_parse.index('pmid')]
-       
+    doi = pub_data[keys_to_parse.index('doi')]
+    
+    # Unpack the list pubdate in year month day
+    # Each entry pubdate[i] is a str in the format YYYY-MM-DD
+    # NOTE certain dates may not have DD so assgin to this entry DD=00
+    # TODO: check if this inconsistency of dates has to do with the info 
+    # available in PubMed or with how we storre and read the XML files
+    pubdate_year = []
+    pubdate_month = []
+    pubdate_day = []
+    for p in pubdate:
+        p_split = p.split('-')
+        if len(p_split) == 3:
+            pubdate_year.append(p_split[0])
+            pubdate_month.append(p_split[1])
+            pubdate_day.append(p_split[2])
+        elif len(p_split) == 2:
+            pubdate_year.append(p_split[0])
+            pubdate_month.append(p_split[1])
+        elif len(p_split) == 1:
+            pubdate_year.append(p_split[0])
+        elif p_split[0]:
+            pubdate_year.append('0000')
+            pubdate_month.append('00')
+            pubdate_day.append('00')
+            print('\nEmpty date')
+    
     # Unpack the authors list and dictionaries to get first, last name and 
     # affiliation
+    # authors_affiliations is a list of N=number of publications for the current xml file 
     authors_affiliations = pub_data[0]
-    all_affiliations = []
-    all_author_list = []
-    all_first_author_first_name = []
-    all_first_author_last_name = []  
-    for aa in authors_affiliations:
+    all_affil = []
+    all_first_name = []
+    all_last_name = []
+    all_first_last_name = []
+    # For each publication, we have N authors and affiliations - unpack this info
+    # in this loop
+    for aa, current_pmid in zip(authors_affiliations, pmid):
         affil = [current_aa['affiliation'] for current_aa in aa]
-        if any(a for a in affil):#if list contains any non-empty affiliations then join them 
-            affil = delimeter.join(affil)
-        else:
-            affil = ''
-        all_affiliations.append(affil)
+        for current_affil in affil:
+            if ';' in current_affil: print('\nContains ;', current_affil)    
         #Get first and last name
         first_name = [current_aa['forename'] for current_aa in aa]
         last_name = [current_aa['lastname'] for current_aa in aa]
-        all_first_author_first_name.append(first_name[0])
-        all_first_author_last_name.append(last_name[0]) 
-        # Wrap every first and last name in a string seperating each author 
-        # with delimeter  
-        first_last_authorlist = [fl[0] + ',' + fl[1] for fl in zip(first_name,last_name)]
-        first_last_authorlist = delimeter.join(first_last_authorlist)
-        all_author_list.append(first_last_authorlist)
-                            
+   
     # Remove unwanted elements from affiliations:
     # i.  email address 
     # ii. author names or initials in parentheses (can also remove acronyms of location but this is OK)   
     # iii. the word "and" from the beginning of an affiliation 
     # iv. length of affiliation above len_threshold 
-    all_affiliations_cleaned = txtfun.remove_email_txtinparen(all_affiliations,
-                                                              delimeter = delimeter
-                                                              ) 
+    # all_affiliations_cleaned = txtfun.remove_email_txtinparen(all_affiliations,
+    #                                                           delimeter = delimeter
+    #                                                           ) 
     
     # Insert simultaneously the row corresponing to his xml file in the 
     # sql database
     # We create a tuple for each row  assembled in a list for simultaneous 
     # insertion
     all_rows = [
-                all_first_author_first_name,
-                all_first_author_last_name,
-                pubdate,
-                all_author_list,
-                journal,
-                title,
+                pmid,
+                pubdate_year,
+                pubdate_month,
+                pubdate_day,
+                journal_title,
+                article_title,
                 abstract,
-                all_affiliations_cleaned,
-                pmid
+                doi
                 ]
     
-#     all_rows = [ar for ar in zip(*all_rows)]
-#     sql_insert = 'INSERT INTO publications VALUES(?,?,?,?,?,?,?,?,?);'
-#     readwritefun.sql_insert_many_to_table(sql_insert, 
-#                                           rows = all_rows, 
-#                                           conn = conn
-#                                          )
+    all_rows = [ar for ar in zip(*all_rows)]
+    sql_insert = 'INSERT INTO publication VALUES(?,?,?,?,?,?,?,?);'
+    readwritefun.sql_insert_many_to_table(sql_insert, 
+                                          rows = all_rows, 
+                                          conn = conn
+                                          )
     
-# conn.close()
+conn.close()
 
