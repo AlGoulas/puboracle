@@ -134,10 +134,13 @@ def sql_insert_many_to_table(sql_insert,
                              conn = None,
                              verbose = True
                              ):
-    c = conn.cursor()
-    c.executemany(sql_insert, rows)
-    conn.commit()
-    if verbose is True:
-        print('\nWe have inserted', c.rowcount, ' rows')
+    try:
+        c = conn.cursor()
+        c.executemany(sql_insert, rows)
+        conn.commit()
+        if verbose is True:
+            print('\nWe have inserted', c.rowcount, ' rows')
+    except Error as e:
+        print(e)
             
                 

@@ -50,9 +50,9 @@ conn = readwritefun.sql_create_db(db_folder,
                                   db_filename = db_filename
                                   )
 
-# Create table publications if it does not exists
+# Create table publication if it does not exists
 sql_table = """ CREATE TABLE IF NOT EXISTS publication (
-                                    pubmed_id INTEGER PRIMARY KEY,
+                                    pmid INTEGER NOT NULL PRIMARY KEY,
                                     pubdate_year TEXT,
                                     pubdate_month TEXT,
                                     pubdate_day TEXT,
@@ -66,8 +66,22 @@ readwritefun.sql_create_table(conn,
                               sql_table = sql_table
                               )
 
+# Create table author if it does not exists
+sql_table = """ CREATE TABLE IF NOT EXISTS author (
+                                    pmid INTEGER,
+                                    first_name TEXT NOT NULL,
+                                    last_name TEXT NOT NULL,
+                                    PRIMARY KEY (first_name, last_name)
+                                    FOREIGN KEY (pmid)
+                                        REFERENCES publication (pmid) 
+                                ); """
+
+readwritefun.sql_create_table(conn, 
+                              sql_table = sql_table
+                              )
+
+
 # Read one-by-one the xml files and insert rows in the database 
-len_threshold = 12#len threshold for keeping an affiliation
 for axf in all_xml_files:
     pub_data, _ = readwritefun.read_xml_to_dict(folder_to_xmls, 
                                                 all_xml_files = [axf],
@@ -99,8 +113,11 @@ for axf in all_xml_files:
         elif len(p_split) == 2:
             pubdate_year.append(p_split[0])
             pubdate_month.append(p_split[1])
+            pubdate_day.append('00')
         elif len(p_split) == 1:
             pubdate_year.append(p_split[0])
+            pubdate_month.append('00')
+            pubdate_day.append('00')
         elif p_split[0]:
             pubdate_year.append('0000')
             pubdate_month.append('00')
@@ -114,16 +131,15 @@ for axf in all_xml_files:
     all_affil = []
     all_first_name = []
     all_last_name = []
-    all_first_last_name = []
     # For each publication, we have N authors and affiliations - unpack this info
     # in this loop
     for aa, current_pmid in zip(authors_affiliations, pmid):
-        affil = [current_aa['affiliation'] for current_aa in aa]
-        for current_affil in affil:
-            if ';' in current_affil: print('\nContains ;', current_affil)    
+        affil = [current_aa['affiliation'] for current_aa in aa]  
         #Get first and last name
         first_name = [current_aa['forename'] for current_aa in aa]
         last_name = [current_aa['lastname'] for current_aa in aa]
+        all_first_name.append(first_name)
+        all_last_name.append(last_name) 
    
     # Remove unwanted elements from affiliations:
     # i.  email address 
@@ -134,10 +150,12 @@ for axf in all_xml_files:
     #                                                           delimeter = delimeter
     #                                                           ) 
     
-    # Insert simultaneously the row corresponing to his xml file in the 
+    # Insert simultaneously the row corresponing to this xml file in the 
     # sql database
     # We create a tuple for each row  assembled in a list for simultaneous 
     # insertion
+    
+    # For table publication
     all_rows = [
                 pmid,
                 pubdate_year,
@@ -155,6 +173,13 @@ for axf in all_xml_files:
                                           rows = all_rows, 
                                           conn = conn
                                           )
+    
+    # For table author
+    # Prepare the rows for table author by assigning the N authors
+    # to each publication based on the unique pmid
+    all_pmid = []
+    for idx_p,p in enumerate(pmid):
+        all_pmid.extend([p] * len(all_first_name[idx_p]))
     
 conn.close()
 
