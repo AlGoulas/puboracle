@@ -177,9 +177,26 @@ for axf in all_xml_files:
     # For table author
     # Prepare the rows for table author by assigning the N authors
     # to each publication based on the unique pmid
-    all_pmid = []
+    all_pmid_for_rows = []
+    all_first_name_for_rows = []
+    all_last_name_for_rows = []
     for idx_p,p in enumerate(pmid):
-        all_pmid.extend([p] * len(all_first_name[idx_p]))
+        all_pmid_for_rows.extend([p] * len(all_first_name[idx_p]))
+        all_first_name_for_rows.extend(all_first_name[idx_p])
+        all_last_name_for_rows.extend(all_last_name[idx_p])
+       
+    all_rows = [
+                all_pmid_for_rows,
+                all_first_name_for_rows,
+                all_last_name_for_rows
+               ]
     
+    all_rows = [ar for ar in zip(*all_rows)]
+    sql_insert = 'INSERT INTO author VALUES(?,?,?);'
+    readwritefun.sql_insert_many_to_table(sql_insert, 
+                                          rows = all_rows, 
+                                          conn = conn
+                                          ) 
+       
 conn.close()
 
