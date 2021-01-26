@@ -3,7 +3,6 @@
 from pathlib import Path
 
 from puboracle.writestoredata import getdata,readwritefun
-from puboracle.txtprocess import txtfun
 
 # This project showcases how puboracle can be used to mine PubMed and extract 
 # info on geospatial location of research activity, networks of collaborations
@@ -46,20 +45,20 @@ keys_to_parse = [
 # Create SQL database if it does not exist
 db_folder = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/sqlite_tryout')
 db_filename = 'pubmed_design1.db'
-conn = readwritefun.sql_create_db(db_folder,
-                                  db_filename = db_filename
-                                  )
+conn = readwritefun.sql_create_conn_db(db_folder,
+                                       db_filename = db_filename
+                                      )
 
 # Create table publication if it does not exists
 sql_table = """ CREATE TABLE IF NOT EXISTS publication (
                                     pmid INTEGER NOT NULL PRIMARY KEY,
+                                    doi TEXT,
                                     pubdate_year TEXT,
                                     pubdate_month TEXT,
                                     pubdate_day TEXT,
                                     journal_title TEXT,
                                     article_title TEXT,
-                                    abstract TEXT,
-                                    doi TEXT
+                                    abstract TEXT
                                 ); """
 
 readwritefun.sql_create_table(conn, 
@@ -68,18 +67,14 @@ readwritefun.sql_create_table(conn,
 
 # Create table author if it does not exists
 sql_table = """ CREATE TABLE IF NOT EXISTS author (
-                                    pmid INTEGER,
                                     first_name TEXT NOT NULL,
                                     last_name TEXT NOT NULL,
                                     PRIMARY KEY (first_name, last_name)
-                                    FOREIGN KEY (pmid)
-                                        REFERENCES publication (pmid) 
                                 ); """
 
 readwritefun.sql_create_table(conn, 
                               sql_table = sql_table
                               )
-
 
 # Read one-by-one the xml files and insert rows in the database 
 for axf in all_xml_files:
@@ -158,17 +153,17 @@ for axf in all_xml_files:
     # For table publication
     all_rows = [
                 pmid,
+                doi,
                 pubdate_year,
                 pubdate_month,
                 pubdate_day,
                 journal_title,
                 article_title,
-                abstract,
-                doi
+                abstract
                 ]
     
     all_rows = [ar for ar in zip(*all_rows)]
-    sql_insert = 'INSERT INTO publication VALUES(?,?,?,?,?,?,?,?);'
+    sql_insert = 'INSERT OR IGNORE INTO publication VALUES(?,?,?,?,?,?,?,?);'
     readwritefun.sql_insert_many_to_table(sql_insert, 
                                           rows = all_rows, 
                                           conn = conn
@@ -186,13 +181,12 @@ for axf in all_xml_files:
         all_last_name_for_rows.extend(all_last_name[idx_p])
        
     all_rows = [
-                all_pmid_for_rows,
                 all_first_name_for_rows,
                 all_last_name_for_rows
                ]
     
     all_rows = [ar for ar in zip(*all_rows)]
-    sql_insert = 'INSERT INTO author VALUES(?,?,?);'
+    sql_insert = 'INSERT OR IGNORE INTO author VALUES(?,?);'
     readwritefun.sql_insert_many_to_table(sql_insert, 
                                           rows = all_rows, 
                                           conn = conn

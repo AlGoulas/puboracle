@@ -96,7 +96,7 @@ def read_xml_to_dict(folder_to_xmls,
                       
     return all_values, xml_file  
 
-def sql_create_db(db_folder, db_filename = None):
+def sql_create_conn_db(db_folder, db_filename = None):
     '''
     Create a database connection to a SQLite database 
     
