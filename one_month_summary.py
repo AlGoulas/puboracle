@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from puboracle.writestoredata import getdata,readwritefun
+from puboracle.txtprocess import txtfun 
 
 # This project showcases how puboracle can be used to mine PubMed and extract 
 # info on geospatial location of research activity, networks of collaborations
@@ -24,6 +25,7 @@ getdata.fetch_write_data(
                         days = days,
                         save_folder = save_folder
                         )
+
 # Read all the XML files that were downloaded
 folder_to_xmls = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/example_puboracle_connectomics/xmldata/')
 all_xml_files = readwritefun.get_files_in_folder(folder_to_xmls, 
@@ -70,6 +72,18 @@ sql_table = """ CREATE TABLE IF NOT EXISTS author (
                                     first_name TEXT NOT NULL,
                                     last_name TEXT NOT NULL,
                                     PRIMARY KEY (first_name, last_name)
+                                ); """
+
+readwritefun.sql_create_table(conn, 
+                              sql_table = sql_table
+                              )
+
+# Create table affiliation if it does not exist
+sql_table = """ CREATE TABLE IF NOT EXISTS affiliation (
+                                    affiliation_name TEXT NOT NULL PRIMARY KEY,
+                                    latitude REAL,
+                                    longitude REAL,
+                                    country TEXT
                                 ); """
 
 readwritefun.sql_create_table(conn, 
@@ -134,7 +148,8 @@ for axf in all_xml_files:
         first_name = [current_aa['forename'] for current_aa in aa]
         last_name = [current_aa['lastname'] for current_aa in aa]
         all_first_name.append(first_name)
-        all_last_name.append(last_name) 
+        all_last_name.append(last_name)
+        all_affil.extend(affil)
    
     # Remove unwanted elements from affiliations:
     # i.  email address 
@@ -191,6 +206,33 @@ for axf in all_xml_files:
                                           rows = all_rows, 
                                           conn = conn
                                           ) 
-       
+    
+    # Prepare the rows - extract the country and constuct list with 
+    # longitude and latitude info set as 0 (geocoding will be done seperately)
+    # Assign country - this simple takes the last entry of the affiliation
+    # when splitting the str all_affil[i]
+    # TODO: Consider finding the country in a more robust way without the 
+    # aforementioned assumtion
+    country = []
+    for aa in all_affil:
+        country.append(txtfun.keep_only_unicode(aa.split(',')[-1]))    
+    latitude = [0] * len(all_affil)
+    longitude = [0] * len(all_affil)
+    # Insert into table affiliations
+    all_rows = [
+               all_affil,
+               latitude,
+               longitude,
+               country
+               ]
+  
+    all_rows = [ar for ar in zip(*all_rows)]
+    sql_insert = 'INSERT OR IGNORE INTO affiliation VALUES(?,?,?,?);'
+    readwritefun.sql_insert_many_to_table(sql_insert, 
+                                          rows = all_rows, 
+                                          conn = conn
+                                          ) 
+
+
 conn.close()
 
