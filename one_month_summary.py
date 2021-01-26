@@ -149,17 +149,17 @@ for axf in all_xml_files:
         last_name = [current_aa['lastname'] for current_aa in aa]
         all_first_name.append(first_name)
         all_last_name.append(last_name)
-        all_affil.extend(affil)
+        # Perform some NLP in affil
+        # Remove unwanted elements from affiliations:
+        # i.  email address 
+        # ii. author names or initials in parentheses (can also remove acronyms of location but this is OK)   
+        # iii. the word "and" from the beginning of an affiliation 
+        # iv. length of affiliation above len_threshold
+        affil_cleaned = txtfun.remove_email_txtinparen(affil,
+                                                       delimeter = ';'
+                                                      ) 
+        all_affil.extend(affil_cleaned)
    
-    # Remove unwanted elements from affiliations:
-    # i.  email address 
-    # ii. author names or initials in parentheses (can also remove acronyms of location but this is OK)   
-    # iii. the word "and" from the beginning of an affiliation 
-    # iv. length of affiliation above len_threshold 
-    # all_affiliations_cleaned = txtfun.remove_email_txtinparen(all_affiliations,
-    #                                                           delimeter = delimeter
-    #                                                           ) 
-    
     # Insert simultaneously the row corresponing to this xml file in the 
     # sql database
     # We create a tuple for each row  assembled in a list for simultaneous 
@@ -209,18 +209,28 @@ for axf in all_xml_files:
     
     # Prepare the rows - extract the country and constuct list with 
     # longitude and latitude info set as 0 (geocoding will be done seperately)
+    # First we have to unpack the str in all_affil, since certain str may 
+    # contain multiple affiliations (authors may have more than one affiliation)
+    all_affil_unpacked = []
+    for aa in all_affil:
+        if ';' in aa:
+            aa_split = aa.split(';')
+            aa_split = [aas.rstrip().lstrip() for aas in aa_split] 
+            all_affil_unpacked.extend(aa_split) 
+        else:
+            all_affil_unpacked.append(aa.rstrip().lstrip()) 
     # Assign country - this simple takes the last entry of the affiliation
     # when splitting the str all_affil[i]
     # TODO: Consider finding the country in a more robust way without the 
-    # aforementioned assumtion
+    # aforementioned assumption
     country = []
-    for aa in all_affil:
+    for aa in all_affil_unpacked:
         country.append(txtfun.keep_only_unicode(aa.split(',')[-1]))    
-    latitude = [0] * len(all_affil)
-    longitude = [0] * len(all_affil)
+    latitude = [0] * len(all_affil_unpacked)
+    longitude = [0] * len(all_affil_unpacked)
     # Insert into table affiliations
     all_rows = [
-               all_affil,
+               all_affil_unpacked,
                latitude,
                longitude,
                country
