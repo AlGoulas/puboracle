@@ -26,13 +26,14 @@ def peekin_generator(iterable):
     return first, itertools.chain([first], iterable)    
 
 def pub_affil_author_junction(list_author_affil = None,
-                              pub_id = None
+                              pub_id = None,
+                              delimeter_affil = ';'
                               ):
     
     # Get affil - can be multiple affils: str seperated with ';'
     affil = [laa['affiliation'] for laa in list_author_affil]  
     affil = txtfun.remove_email_txtinparen(affil,
-                                           delimeter = ';'
+                                           delimeter = delimeter_affil
                                            ) 
     #Get first and last name
     first_name = [laa['forename'] for laa in list_author_affil]
@@ -47,7 +48,30 @@ def pub_affil_author_junction(list_author_affil = None,
                 last_name
                 ]
     
-    all_rows = [ar for ar in zip(*all_rows)]
+    all_rows_auth_pub = [ar for ar in zip(*all_rows)]
     
-    return all_rows 
+    # author_affil
+    all_affil = []
+    all_first_name = []
+    all_last_name = []
+    for a,fn,ln in zip(affil, first_name, last_name):
+        if delimeter_affil in a:
+            a_splited = a.split(delimeter_affil)
+            all_affil.extend(a_splited)
+            all_first_name.extend([fn] * len(a_splited))
+            all_last_name.extend([ln] * len(a_splited))
+        else:
+            all_affil.append(a)
+            all_first_name.append(fn)
+            all_last_name.append(ln)
+
+    all_rows = [
+               all_first_name,
+               all_last_name,
+               all_affil
+              ]
+    
+    all_rows_auth_affil = [ar for ar in zip(*all_rows)]
+
+    return all_rows_auth_pub, all_rows_auth_affil 
     

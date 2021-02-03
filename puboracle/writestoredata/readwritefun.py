@@ -126,6 +126,7 @@ def sql_create_table(conn, sql_table = None):
     try:
         c = conn.cursor()
         c.execute(sql_table)
+        c.close()
     except Error as e:
         print(e)
 
@@ -140,6 +141,7 @@ def sql_insert_many_to_table(sql_insert,
         conn.commit()
         if verbose is True:
             print('\nWe have inserted', c.rowcount, ' rows')
+        c.close()    
     except Error as e:
         print(e)
             
