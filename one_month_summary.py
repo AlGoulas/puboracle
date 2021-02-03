@@ -4,6 +4,7 @@ from pathlib import Path
 
 from puboracle.writestoredata import getdata,readwritefun
 from puboracle.txtprocess import txtfun 
+from puboracle.aux import auxfun 
 
 # This project showcases how puboracle can be used to mine PubMed and extract 
 # info on geospatial location of research activity, networks of collaborations
@@ -15,7 +16,7 @@ from puboracle.txtprocess import txtfun
 # Submit query and fetch data in an XML format
 save_folder = '/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/example_puboracle_connectomics/xmldata/'
 query = 'connectomics OR connectome'
-days = 30
+days = 100
 email = 'arimpos@gmail.com'
 
 getdata.fetch_write_data(
@@ -55,9 +56,7 @@ conn = readwritefun.sql_create_conn_db(db_folder,
 sql_table = """ CREATE TABLE IF NOT EXISTS publication (
                                     pmid INTEGER NOT NULL PRIMARY KEY,
                                     doi TEXT,
-                                    pubdate_year TEXT,
-                                    pubdate_month TEXT,
-                                    pubdate_day TEXT,
+                                    pubdate TEXT,
                                     journal_title TEXT,
                                     article_title TEXT,
                                     abstract TEXT
@@ -81,9 +80,24 @@ readwritefun.sql_create_table(conn,
 # Create table affiliation if it does not exist
 sql_table = """ CREATE TABLE IF NOT EXISTS affiliation (
                                     affiliation_name TEXT NOT NULL PRIMARY KEY,
+                                    country TEXT,
                                     latitude REAL,
-                                    longitude REAL,
-                                    country TEXT
+                                    longitude REAL
+                                ); """
+
+readwritefun.sql_create_table(conn, 
+                              sql_table = sql_table
+                              )
+
+# Create table author-publication if it does not exist
+sql_table = """ CREATE TABLE IF NOT EXISTS author_publication (
+                                  pmid INTEGER NOT NULL,
+                                  first_name TEXT NOT NULL,
+                                  last_name TEXT NOT NULL,
+                                  FOREIGN KEY (pmid) REFERENCES publication (pmid),
+                                  FOREIGN KEY (first_name) REFERENCES publication (first_name),
+                                  FOREIGN KEY (last_name) REFERENCES publication (last_name),
+                                  PRIMARY KEY (first_name, last_name, pmid)
                                 ); """
 
 readwritefun.sql_create_table(conn, 
@@ -107,30 +121,21 @@ for axf in all_xml_files:
     
     # Unpack the list pubdate in year month day
     # Each entry pubdate[i] is a str in the format YYYY-MM-DD
-    # NOTE certain dates may not have DD so assgin to this entry DD=00
+    # NOTE certain dates may not have DD or MM so assign to such entries 
+    # DD=00 or MM=0
     # TODO: check if this inconsistency of dates has to do with the info 
     # available in PubMed or with how we storre and read the XML files
-    pubdate_year = []
-    pubdate_month = []
-    pubdate_day = []
+    pubdate_processed = []
     for p in pubdate:
         p_split = p.split('-')
         if len(p_split) == 3:
-            pubdate_year.append(p_split[0])
-            pubdate_month.append(p_split[1])
-            pubdate_day.append(p_split[2])
+            pubdate_processed.append('-'.join(p_split))
         elif len(p_split) == 2:
-            pubdate_year.append(p_split[0])
-            pubdate_month.append(p_split[1])
-            pubdate_day.append('00')
+            pubdate_processed.append('-'.join(p_split) + '-00')
         elif len(p_split) == 1:
-            pubdate_year.append(p_split[0])
-            pubdate_month.append('00')
-            pubdate_day.append('00')
+            pubdate_processed.append(p_split[0] + '-00-00')
         elif p_split[0]:
-            pubdate_year.append('0000')
-            pubdate_month.append('00')
-            pubdate_day.append('00')
+            pubdate_processed.append('0000-00-00')
             print('\nEmpty date')
     
     # Unpack the authors list and dictionaries to get first, last name and 
@@ -140,6 +145,10 @@ for axf in all_xml_files:
     all_affil = []
     all_first_name = []
     all_last_name = []
+    
+    # List of rows for the junction tables
+    author_publication_rows = []
+
     # For each publication, we have N authors and affiliations - unpack this info
     # in this loop
     for aa, current_pmid in zip(authors_affiliations, pmid):
@@ -159,7 +168,11 @@ for axf in all_xml_files:
                                                        delimeter = ';'
                                                       ) 
         all_affil.extend(affil_cleaned)
-   
+        auth_pub_row = auxfun.pub_affil_author_junction(list_author_affil = aa,
+                                                        pub_id = current_pmid
+                                                        )
+        author_publication_rows.extend(auth_pub_row)
+         
     # Insert simultaneously the row corresponing to this xml file in the 
     # sql database
     # We create a tuple for each row  assembled in a list for simultaneous 
@@ -169,16 +182,14 @@ for axf in all_xml_files:
     all_rows = [
                 pmid,
                 doi,
-                pubdate_year,
-                pubdate_month,
-                pubdate_day,
+                pubdate_processed,
                 journal_title,
                 article_title,
                 abstract
                 ]
     
     all_rows = [ar for ar in zip(*all_rows)]
-    sql_insert = 'INSERT OR IGNORE INTO publication VALUES(?,?,?,?,?,?,?,?);'
+    sql_insert = 'INSERT OR IGNORE INTO publication VALUES(?,?,?,?,?,?);'
     readwritefun.sql_insert_many_to_table(sql_insert, 
                                           rows = all_rows, 
                                           conn = conn
@@ -231,15 +242,23 @@ for axf in all_xml_files:
     # Insert into table affiliations
     all_rows = [
                all_affil_unpacked,
+               country,
                latitude,
-               longitude,
-               country
+               longitude
                ]
   
     all_rows = [ar for ar in zip(*all_rows)]
     sql_insert = 'INSERT OR IGNORE INTO affiliation VALUES(?,?,?,?);'
     readwritefun.sql_insert_many_to_table(sql_insert, 
                                           rows = all_rows, 
+                                          conn = conn
+                                          ) 
+    
+    # Junction tables
+    # author_publication
+    sql_insert = 'INSERT OR IGNORE INTO author_publication VALUES(?,?,?);'
+    readwritefun.sql_insert_many_to_table(sql_insert, 
+                                          rows = author_publication_rows, 
                                           conn = conn
                                           ) 
 
