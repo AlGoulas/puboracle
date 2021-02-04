@@ -27,14 +27,16 @@ def peekin_generator(iterable):
 
 def pub_affil_author_junction(list_author_affil = None,
                               pub_id = None,
+                              clean_fun = None,
                               delimeter_affil = ';'
                               ):
     
     # Get affil - can be multiple affils: str seperated with ';'
     affil = [laa['affiliation'] for laa in list_author_affil]  
-    affil = txtfun.remove_email_txtinparen(affil,
-                                           delimeter = delimeter_affil
-                                           ) 
+    if clean_fun is not None:
+        affil = clean_fun(affil,
+                          delimeter = delimeter_affil
+                         ) 
     #Get first and last name
     first_name = [laa['forename'] for laa in list_author_affil]
     last_name = [laa['lastname'] for laa in list_author_affil]
@@ -72,6 +74,15 @@ def pub_affil_author_junction(list_author_affil = None,
               ]
     
     all_rows_auth_affil = [ar for ar in zip(*all_rows)]
+    
+    # pub_affil
+    pub_id_junction = [pub_id] * len(all_affil)
+    all_rows = [
+                pub_id_junction,
+                all_affil
+                ]
+    
+    all_rows_pub_affil = [ar for ar in zip(*all_rows)]    
 
-    return all_rows_auth_pub, all_rows_auth_affil 
+    return all_rows_auth_pub, all_rows_auth_affil, all_rows_pub_affil
     

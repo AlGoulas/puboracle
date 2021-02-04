@@ -162,7 +162,7 @@ def remove_email_txtinparen(lst_str,
             cleaned = cleaned.replace('Electronic address:','')# remove 'Electronic address:'
             cleaned = re.sub("^\sand", "", cleaned)# remove 'and' from the beggining (preceeded by whitespace)
             if cleaned and len(cleaned) > len_threshold:   
-                all_current_cleaned.append(cleaned.lstrip())#remove potential leading whitespace
+                all_current_cleaned.append(cleaned.lstrip().rstrip())#remove potential leading and trailing whitespace
         # If we have non-empty all_current_cleaned list then append it in
         # lst_str_cleaned with the joined with the delimeter  
         if all_current_cleaned:

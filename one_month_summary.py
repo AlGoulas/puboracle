@@ -119,6 +119,19 @@ readwritefun.sql_create_table(conn,
                               sql_table = sql_table
                               )
 
+# Create table publication-affiliation if it does not exist
+sql_table = """ CREATE TABLE IF NOT EXISTS publication_affiliation (
+                                  pmid INTEGER NOT NULL,
+                                  affiliation_name TEXT NOT NULL,
+                                  FOREIGN KEY (pmid) REFERENCES publication (pmid),
+                                  FOREIGN KEY (affiliation_name) REFERENCES affiliation (affiliation_name),
+                                  PRIMARY KEY (pmid, affiliation_name)
+                                ); """
+
+readwritefun.sql_create_table(conn, 
+                              sql_table = sql_table
+                              )
+
 # Read one-by-one the xml files and insert rows in the database 
 for axf in all_xml_files:
     pub_data, _ = readwritefun.read_xml_to_dict(folder_to_xmls, 
@@ -164,6 +177,8 @@ for axf in all_xml_files:
     # List of rows for the junction tables
     author_publication_rows = []
     author_affiliation_rows = []
+    publication_affiliation_rows = []
+    
     # For each publication, we have N authors and affiliations - unpack this info
     # in this loop
     for aa, current_pmid in zip(authors_affiliations, pmid):
@@ -184,11 +199,15 @@ for axf in all_xml_files:
                                                       ) 
         all_affil.extend(affil_cleaned)
         # author_publication, author_affiliation
-        auth_pub_row, auth_affil_row = auxfun.pub_affil_author_junction(list_author_affil = aa,
-                                                                         pub_id = current_pmid
-                                                                        )
+        (auth_pub_row, 
+         auth_affil_row,
+         pub_affil_row) = auxfun.pub_affil_author_junction(list_author_affil = aa,
+                                                           pub_id = current_pmid,
+                                                           clean_fun = txtfun.remove_email_txtinparen
+                                                           )
         author_publication_rows.extend(auth_pub_row)
         author_affiliation_rows.extend(auth_affil_row)
+        publication_affiliation_rows.extend(pub_affil_row)
          
     # Insert simultaneously the row corresponing to this xml file in the 
     # sql database
@@ -280,9 +299,9 @@ for axf in all_xml_files:
                                           ) 
     
     # author_affiliation
-    sql_insert = 'INSERT OR IGNORE INTO author_affiliation VALUES(?,?,?);'
+    sql_insert = 'INSERT OR IGNORE INTO publication_affiliation VALUES(?,?);'
     readwritefun.sql_insert_many_to_table(sql_insert, 
-                                          rows = author_affiliation_rows, 
+                                          rows = publication_affiliation_rows, 
                                           conn = conn
                                           ) 
 
