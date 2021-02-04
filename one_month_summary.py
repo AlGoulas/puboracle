@@ -14,9 +14,9 @@ from puboracle.aux import auxfun
 # "connectomics" in the last 30 days
 
 # Submit query and fetch data in an XML format
-save_folder = '/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/example_puboracle_connectomics/xmldata/'
-query = 'connectomics OR connectome'
-days = 100
+save_folder = '/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/example_puboracle_brain_neuroscience/xmldata/'
+query = 'brain or neuroscience'
+days = 30
 email = 'arimpos@gmail.com'
 
 getdata.fetch_write_data(
@@ -28,7 +28,7 @@ getdata.fetch_write_data(
                         )
 
 # Read all the XML files that were downloaded
-folder_to_xmls = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/example_puboracle_connectomics/xmldata/')
+folder_to_xmls = Path('/Users/alexandrosgoulas/Data/work-stuff/python-code/projects/example_puboracle_brain_neuroscience/xmldata/')
 all_xml_files = readwritefun.get_files_in_folder(folder_to_xmls, 
                                                  order = True
                                                 )
@@ -170,9 +170,6 @@ for axf in all_xml_files:
     # affiliation
     # authors_affiliations is a list of N=number of publications for the current xml file 
     authors_affiliations = pub_data[0]
-    all_affil = []
-    all_first_name = []
-    all_last_name = []
     
     # List of rows for the junction tables
     author_publication_rows = []
@@ -182,23 +179,7 @@ for axf in all_xml_files:
     # For each publication, we have N authors and affiliations - unpack this info
     # in this loop
     for aa, current_pmid in zip(authors_affiliations, pmid):
-        affil = [current_aa['affiliation'] for current_aa in aa]  
-        #Get first and last name
-        first_name = [current_aa['forename'] for current_aa in aa]
-        last_name = [current_aa['lastname'] for current_aa in aa]
-        all_first_name.append(first_name)
-        all_last_name.append(last_name)
-        # Perform some NLP in affil
-        # Remove unwanted elements from affiliations:
-        # i.  email address 
-        # ii. author names or initials in parentheses (can also remove acronyms of location but this is OK)   
-        # iii. the word "and" from the beginning of an affiliation 
-        # iv. length of affiliation above len_threshold
-        affil_cleaned = txtfun.remove_email_txtinparen(affil,
-                                                       delimeter = ';'
-                                                      ) 
-        all_affil.extend(affil_cleaned)
-        # author_publication, author_affiliation
+        # author_publication, author_affiliation, publication_affiliation
         (auth_pub_row, 
          auth_affil_row,
          pub_affil_row) = auxfun.pub_affil_author_junction(list_author_affil = aa,
@@ -213,7 +194,6 @@ for axf in all_xml_files:
     # sql database
     # We create a tuple for each row  assembled in a list for simultaneous 
     # insertion
-    
     # For table publication
     all_rows = [
                 pmid,
@@ -232,52 +212,33 @@ for axf in all_xml_files:
                                           )
     
     # For table author
-    # Prepare the rows for table author by assigning the N authors
-    # to each publication based on the unique pmid
-    all_pmid_for_rows = []
-    all_first_name_for_rows = []
-    all_last_name_for_rows = []
-    for idx_p,p in enumerate(pmid):
-        all_pmid_for_rows.extend([p] * len(all_first_name[idx_p]))
-        all_first_name_for_rows.extend(all_first_name[idx_p])
-        all_last_name_for_rows.extend(all_last_name[idx_p])
-       
-    all_rows = [
-                all_first_name_for_rows,
-                all_last_name_for_rows
-               ]
-    
-    all_rows = [ar for ar in zip(*all_rows)]
+    # Grab the first and last name from the junction rows above
+    # This contains double entries potentially since the junction tables
+    # represent N to M relations, but this is OK since the first and last 
+    # name is the primary key for Table author so no duplicates will be entered
+    all_rows = [(aar[0], aar[1]) for aar in author_affiliation_rows]
     sql_insert = 'INSERT OR IGNORE INTO author VALUES(?,?);'
     readwritefun.sql_insert_many_to_table(sql_insert, 
                                           rows = all_rows, 
                                           conn = conn
                                           ) 
-    
-    # Prepare the rows - extract the country and constuct list with 
-    # longitude and latitude info set as 0 (geocoding will be done seperately)
-    # First we have to unpack the str in all_affil, since certain str may 
-    # contain multiple affiliations (authors may have more than one affiliation)
-    all_affil_unpacked = []
-    for aa in all_affil:
-        if ';' in aa:
-            aa_split = aa.split(';')
-            aa_split = [aas.rstrip().lstrip() for aas in aa_split] 
-            all_affil_unpacked.extend(aa_split) 
-        else:
-            all_affil_unpacked.append(aa.rstrip().lstrip()) 
+
+    # Grab the affiliation_name from the junction rows above
+    # This contains double entries potentially since the junction tables
+    # represent N to M relations, but this is OK since the affiliation_name
+    # is the primary key for Table affiliation so no duplicates will be entered
+
     # Assign country - this simple takes the last entry of the affiliation
     # when splitting the str all_affil[i]
     # TODO: Consider finding the country in a more robust way without the 
-    # aforementioned assumption
-    country = []
-    for aa in all_affil_unpacked:
-        country.append(txtfun.keep_only_unicode(aa.split(',')[-1]))    
-    latitude = [0] * len(all_affil_unpacked)
-    longitude = [0] * len(all_affil_unpacked)
+    # aforementioned assumption  
+    country = [txtfun.keep_only_unicode(aar[2].split(',')[-1]) for aar in author_affiliation_rows]   
+    all_affil = [aar[2] for aar in author_affiliation_rows]
+    latitude = [0] * len(all_affil)
+    longitude = [0] * len(all_affil)
     # Insert into table affiliations
     all_rows = [
-               all_affil_unpacked,
+               all_affil,
                country,
                latitude,
                longitude
@@ -299,6 +260,13 @@ for axf in all_xml_files:
                                           ) 
     
     # author_affiliation
+    sql_insert = 'INSERT OR IGNORE INTO author_affiliation VALUES(?,?,?);'
+    readwritefun.sql_insert_many_to_table(sql_insert, 
+                                          rows = author_affiliation_rows, 
+                                          conn = conn
+                                          ) 
+    
+    # publication_affiliation
     sql_insert = 'INSERT OR IGNORE INTO publication_affiliation VALUES(?,?);'
     readwritefun.sql_insert_many_to_table(sql_insert, 
                                           rows = publication_affiliation_rows, 

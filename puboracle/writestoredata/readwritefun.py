@@ -120,6 +120,8 @@ def sql_create_table(conn, sql_table = None):
     '''
     Create a table from the create_table_sql statement
     
+    Input
+    -----
     conn: Connection object
     create_table_sql: a CREATE TABLE statement
     '''
@@ -135,6 +137,19 @@ def sql_insert_many_to_table(sql_insert,
                              conn = None,
                              verbose = True
                              ):
+    '''
+    Insert many rows into a table based on the sql_insert statement
+    
+    Input
+    -----
+    sql_insert: a INSERT statement
+    
+    rows: list, len N containing a tuple for each of N rows to be inserted
+    
+    conn: Connection object
+    
+    verbose: bool, specifying if messages are desired (=True)
+    '''
     try:
         c = conn.cursor()
         c.executemany(sql_insert, rows)
